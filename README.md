@@ -9,3 +9,6 @@ pip install flask
 # Configuracion Github
  git config --global user.name
  git config --global user.email
+
+# Bcrypt
+pip install bcrypt
