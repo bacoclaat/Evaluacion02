@@ -12,3 +12,6 @@ pip install flask
 
 # Bcrypt
 pip install bcrypt
+
+# Requests
+pip install requests
