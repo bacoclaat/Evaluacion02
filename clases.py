@@ -15,7 +15,7 @@ class Usuario:
         else:
             self._email = email
         try:
-            if ' ' in password or password == "":
+            if ' ' in password or password.strip() == "":
                 raise ValueError("La contraseña no puede contener espacios o estar vacia.") # Loggear error
             else:
                 self._password_hash = bcrypt.hashpw(password.encode('latin-1'), bcrypt.gensalt())
@@ -36,3 +36,8 @@ while True:
     except ValueError as e:
         print(f"Error al crear el usuario: {e}")
         continue
+    ooo = input("Ingrese su contraseña para verificar: ")
+    if usuario.verificar_password(ooo):
+        print("Contraseña verificada correctamente.")
+    else:
+        print("Contraseña incorrecta.")
