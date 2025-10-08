@@ -5,7 +5,7 @@ from datetime import datetime
 
 patron_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 patron_nombre = r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$' # Solo letras y espacios
-patron_nombre.libro = r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s]+$' # Solo letras, numeros y espacios
+patron_nombre_libro = r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s]+$' # Solo letras, numeros y espacios
 patron_isbn = r'^(?:\d{9}[\dXx]|\d{13}|\d{3}-\d{1,5}-\d{1,7}-\d{1,7}-[\dXx])$'
 
 class Usuario:
@@ -72,20 +72,4 @@ class Libro:
         print(f"Título: {self.titulo}, Autor: {self.autor}, Género: {self.genero}, Año: {self.año}, ISBN: {self.isbn}") # Falta añadir la id que la da la base de datos
 
 
-# Ejemplo de uso
-while True:
-    try:
-        input_nombre = input("Ingrese su nombre: ")
-        input_email = input("Ingrese su email: ")
-        input_password = input("Ingrese su contraseña: ")
-        input_universidad = input("Ingrese su universidad: ")
-        usuario = Bibliotecario(input_nombre, input_email, input_password, input_universidad)
-    except ValueError as e:
-        print(f"Error al crear el usuario: {e}")
-        continue
-    ooo = input("Ingrese su contraseña para verificar: ")
-    if usuario.verificar_password(ooo):
-        print("Contraseña verificada correctamente.")
-    else:
-        print("Contraseña incorrecta.")
-    usuario.mostrar_info()
+
