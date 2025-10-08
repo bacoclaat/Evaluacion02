@@ -67,6 +67,7 @@ class Libro:
             raise ValueError("El ISBN no tiene un formato válido.") # Loggear error
         else:
             self.isbn = isbn
+            
     def mostrar_info(self):
         print(f"Título: {self.titulo}, Autor: {self.autor}, Género: {self.genero}, Año: {self.año}, ISBN: {self.isbn}") # Falta añadir la id que la da la base de datos
 
