@@ -1,7 +1,7 @@
 import bcrypt
 import logging # Tengo que añadir un log para el error
 import re
-from datetime import datetime
+from datetime import datetime, timedelta, date
 
 # Tengo que añadir prestamos para el Universitario
 # Ademas tiene que poder pedir un prestamo, y si el libro esta disponible que lo añada a prestamos
@@ -91,7 +91,22 @@ class Libro:
     def mostrar_info(self):
         print(f"Título: {self.titulo}, Autor: {self.autor}, Género: {self.genero}, Año: {self.año}, Tipo: {self.tipo}, Cantidad: {self.cantidad}, ISBN: {self.isbn}") # Falta añadir la id que la da la base de datos
 
+# Terminar esto
 class Prestamo:
-    def __init__(self,usuario,libro,dias) # Terminar esto
+    def __init__(self,universitario,libro,dias):
+        self._universitario = universitario
+        self._libro = libro
+        self._dias = dias
+        self._fch_prestamo = date.today()
+        self._fch_devolucion = self._fch_prestamo + timedelta(days=dias)
+        
+
+# Aca la base de datos o el crud tiene que ir actualizando el dia actual, para saber cuando se tiene que devolver el libro
+    def ver_prestamo(self):
+        dias_restantes = (self._fch_devolucion - date.today()).days
+        print(f"Universitario: {self._universitario.nombre}, Libro: {self._libro.titulo}, Fecha de prestamo: {self._fch_prestamo}, Fecha de devolucion: {self._fch_devolucion}, Dias restantes: {dias_restantes}")
+        if dias_restantes < 0:
+            print("El libro está atrasado.")    
+        
 
 

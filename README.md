@@ -20,3 +20,4 @@ pip install requests
 
 # Base de datos
 Aca vamos a usar SQL Lite ya que es ligero y esta integrado en python, es perfecto para usos en aplicaciones pequeñas
+- import sqlite3
