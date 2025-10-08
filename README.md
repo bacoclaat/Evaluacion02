@@ -17,3 +17,6 @@ pip install bcrypt
 pip install requests
 
 !!! El requests es una prueba
+
+# Base de datos
+Aca vamos a usar SQL Lite ya que es ligero y esta integrado en python, es perfecto para usos en aplicaciones pequeñas
