@@ -3,9 +3,12 @@ import logging # Tengo que añadir un log para el error
 import re
 from datetime import datetime
 
+# Tengo que añadir prestamos para el Universitario
+# Ademas tiene que poder pedir un prestamo, y si el libro esta disponible que lo añada a prestamos
+
 patron_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 patron_nombre = r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$' # Solo letras y espacios
-patron_nombre.libro = r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s]+$' # Solo letras, numeros y espacios
+patron_nombre_libro = r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s]+$' # Solo letras, numeros y espacios
 patron_isbn = r'^(?:\d{9}[\dXx]|\d{13}|\d{3}-\d{1,5}-\d{1,7}-\d{1,7}-[\dXx])$'
 
 class Usuario:
@@ -43,10 +46,19 @@ class Bibliotecario(Usuario):
     def mostrar_info(self):
         super().mostrar_info() 
         print(f", Universidad: {self.universidad}")
+
+class Universitario(Usuario):
+    def __init__(self,nombre,email,password,universidad):
+        super().__init__(nombre,email,password)
+        if not re.match(patron_nombre, universidad):
+            raise ValueError("El nombre de la universidad solo puede contener letras y espacios.") # Loggear error  
+        else:
+            self.universidad = universidad
+        self.prestamo = []
         
 class Libro:
-    def __init__(self,titulo,autor,genero,año,isbn):
-        if not re.match(patron_nombre.libro, titulo):
+    def __init__(self,titulo,autor,genero,año,tipo,cantidad,isbn):
+        if not re.match(patron_nombre_libro, titulo):
             raise ValueError("El titulo solo puede contener letras, numeros y espacios.") # Loggear error
         else:
             self.titulo = titulo
@@ -63,14 +75,24 @@ class Libro:
             raise ValueError(f"Año inválido, debe estar entre 1000 y {año_actual}")
         else:
             self.año = int(año)
+        if not re.match(patron_nombre, tipo):
+            raise ValueError("El tipo de libro solo puede contener letras y espacios.") # Loggear error
+        else:
+            self.tipo = tipo
+        try:
+            self.cantidad = int(cantidad)
+        except ValueError:
+            raise ValueError("La cantidad tiene que ser un numero entero.")
         if not re.match(patron_isbn, isbn):
             raise ValueError("El ISBN no tiene un formato válido.") # Loggear error
         else:
             self.isbn = isbn
             
     def mostrar_info(self):
-        print(f"Título: {self.titulo}, Autor: {self.autor}, Género: {self.genero}, Año: {self.año}, ISBN: {self.isbn}") # Falta añadir la id que la da la base de datos
+        print(f"Título: {self.titulo}, Autor: {self.autor}, Género: {self.genero}, Año: {self.año}, Tipo: {self.tipo}, Cantidad: {self.cantidad}, ISBN: {self.isbn}") # Falta añadir la id que la da la base de datos
 
+class Prestamo:
+    def __init__(self,usuario,libro,dias) # Terminar esto
 
 # Ejemplo de uso
 while True:
