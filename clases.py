@@ -94,20 +94,4 @@ class Libro:
 class Prestamo:
     def __init__(self,usuario,libro,dias) # Terminar esto
 
-# Ejemplo de uso
-while True:
-    try:
-        input_nombre = input("Ingrese su nombre: ")
-        input_email = input("Ingrese su email: ")
-        input_password = input("Ingrese su contraseña: ")
-        input_universidad = input("Ingrese su universidad: ")
-        usuario = Bibliotecario(input_nombre, input_email, input_password, input_universidad)
-    except ValueError as e:
-        print(f"Error al crear el usuario: {e}")
-        continue
-    ooo = input("Ingrese su contraseña para verificar: ")
-    if usuario.verificar_password(ooo):
-        print("Contraseña verificada correctamente.")
-    else:
-        print("Contraseña incorrecta.")
-    usuario.mostrar_info()
+
