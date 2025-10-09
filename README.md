@@ -21,3 +21,9 @@ pip install requests
 # Base de datos
 Aca vamos a usar SQL Lite ya que es ligero y esta integrado en python, es perfecto para usos en aplicaciones pequeñas
 - import sqlite3
+
+# Probar calidad de codigo
+Usar unititest, para probar las funciones más facil
+    import unittest
+
+Usar SonarQube, para ver la calidad del codigo

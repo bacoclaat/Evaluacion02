@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, date
 patron_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 patron_nombre = r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$' # Solo letras y espacios
 patron_nombre_libro = r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s]+$' # Solo letras, numeros y espacios
-patron_isbn = r'^(?:\d{9}[\dXx]|\d{13}|\d{3}-\d{1,5}-\d{1,7}-\d{1,7}-[\dXx])$'
+patron_isbn = r'^(?:\d{9}[\dXx]|\d{13}|\d{3}-\d{1,5}-\d{1,7}-\d{1,7}-[\dXx])$' # ISBN (Identificador unico para libros)
 
 class Usuario:
     def __init__(self,nombre,email,password):
@@ -25,9 +25,9 @@ class Usuario:
             if ' ' in password or password.strip() == "":
                 raise ValueError("La contraseña no puede contener espacios o estar vacia.") # Loggear error
             else:
-                self._password_hash = bcrypt.hashpw(password.encode('latin-1'), bcrypt.gensalt())
+                self._password_hash = bcrypt.hashpw(password.encode('latin-1'), bcrypt.gensalt()) # Hasheado con bcrypt, se usa verificar_password y tiene que lanzar un True.
         except UnicodeEncodeError:
-            raise ValueError("La contraseña contiene caracteres no compatibles con latin-1.") # Loggear error
+            raise ValueError("La contraseña contiene caracteres no compatibles con latin-1.") # Latin-1 solo permite letras acentuadas, signos y simbolos especiales, Loggear error
         
     def mostrar_info(self):
         print(f"Nombre: {self.nombre}, Email: {self._email}", end="")
@@ -55,9 +55,19 @@ class Universitario(Usuario):
         else:
             self.universidad = universidad
         self.prestamo = []
+
+# El admin debe poder modificar los usuarios, eliminar usuarios, modificar usuarios
+# Tenemos que tener ya una cuenta generica de admin (Ej: Nombre: Admin ,Contraseña: admin123)
+class Admin(Usuario):
+    def __init__(self,nombre,password):
+        super().__init__(nombre,password)
+
+    def modificar_usuario(self):
+        
+
         
 class Libro:
-    def __init__(self,titulo,autor,genero,año,tipo,cantidad,isbn):
+    def __init__(self,titulo,autor,genero,año,cantidad,isbn):
         if not re.match(patron_nombre_libro, titulo):
             raise ValueError("El titulo solo puede contener letras, numeros y espacios.") # Loggear error
         else:
@@ -72,13 +82,9 @@ class Libro:
             self.genero = genero
         año_actual = datetime.now().year
         if not re.match(r'^\d{4}$', str(año)) or not (1000 <= int(año) <= año_actual):
-            raise ValueError(f"Año inválido, debe estar entre 1000 y {año_actual}")
+            raise ValueError(f"Año inválido, debe estar entre 1000 y {año_actual}") # Se asegura que no puedan haber
         else:
             self.año = int(año)
-        if not re.match(patron_nombre, tipo):
-            raise ValueError("El tipo de libro solo puede contener letras y espacios.") # Loggear error
-        else:
-            self.tipo = tipo
         try:
             self.cantidad = int(cantidad)
         except ValueError:
@@ -91,7 +97,7 @@ class Libro:
     def mostrar_info(self):
         print(f"Título: {self.titulo}, Autor: {self.autor}, Género: {self.genero}, Año: {self.año}, Tipo: {self.tipo}, Cantidad: {self.cantidad}, ISBN: {self.isbn}") # Falta añadir la id que la da la base de datos
 
-# Terminar esto
+# Terminar esto, no esta listo
 class Prestamo:
     def __init__(self,universitario,libro,dias):
         self._universitario = universitario
