@@ -1,3 +1,4 @@
+import sqlite3
 import bcrypt
 import logging # Tengo que añadir un log para el error
 import re
@@ -35,6 +36,14 @@ class Usuario:
     def verificar_password(self, password):
         return bcrypt.checkpw(password.encode('latin-1'), self._password_hash)
     
+    def save(self):
+        conn = sqlite3.connect('biblioteca.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO usuarios (nombre, email, password_hash, tipo) VALUES (?, ?, ?, 'usuario')", (self.nombre, self._email, self._password_hash))
+        self.id = c.lastrowid
+        conn.commit()
+        conn.close()
+    
 class Bibliotecario(Usuario):
     def __init__(self,nombre,email,password,universidad):
         super().__init__(nombre, email, password)
@@ -47,6 +56,15 @@ class Bibliotecario(Usuario):
         super().mostrar_info() 
         print(f", Universidad: {self.universidad}")
 
+    def save(self):
+        super().save()
+        conn = sqlite3.connect('biblioteca.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO bibliotecarios (usuario_id, universidad) VALUES (?, ?)", (self.id, self.universidad))
+        conn.commit()
+        conn.close()
+        c.execute("UPDATE usuarios SET tipo = 'bibliotecario' WHERE id = ?", (self.id,))
+
 class Universitario(Usuario):
     def __init__(self,nombre,email,password,universidad):
         super().__init__(nombre,email,password)
@@ -54,13 +72,29 @@ class Universitario(Usuario):
             raise ValueError("El nombre de la universidad solo puede contener letras y espacios.") # Loggear error  
         else:
             self.universidad = universidad
-        self.prestamo = []
+
+    def save(self):
+        super().save()
+        conn = sqlite3.connect('biblioteca.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO universitarios (usuario_id, universidad) VALUES (?, ?)", (self.id, self.universidad))
+        conn.commit()
+        conn.close()
+        c.execute("UPDATE usuarios SET tipo = 'universitario' WHERE id = ?", (self.id,))
 
 # El admin debe poder modificar los usuarios, eliminar usuarios, modificar usuarios
 # Tenemos que tener ya una cuenta generica de admin (Ej: Nombre: Admin ,Contraseña: admin123)
 class Admin(Usuario):
     def __init__(self,nombre,password):
         super().__init__(nombre,password)
+
+    def save(self):
+        super().save()
+        conn = sqlite3.connect('biblioteca.db')
+        c = conn.cursor()
+        c.execute("UPDATE usuarios SET tipo = 'admin' WHERE id = ?", (self.id,))
+        conn.commit()
+        conn.close()
 
     def modificar_usuario(self):
         
@@ -97,6 +131,14 @@ class Libro:
     def mostrar_info(self):
         print(f"Título: {self.titulo}, Autor: {self.autor}, Género: {self.genero}, Año: {self.año}, Tipo: {self.tipo}, Cantidad: {self.cantidad}, ISBN: {self.isbn}") # Falta añadir la id que la da la base de datos
 
+    def save(self):
+        conn = sqlite3.connect('biblioteca.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO libros (titulo, autor, genero, año, cantidad, isbn) VALUES (?, ?, ?, ?, ?, ?)", (self.titulo, self.autor, self.genero, self.año, self.cantidad, self.isbn))
+        self.id = c.lastrowid
+        conn.commit()
+        conn.close()
+
 # Terminar esto, no esta listo
 class Prestamo:
     def __init__(self,universitario,libro,dias):
@@ -112,7 +154,15 @@ class Prestamo:
         dias_restantes = (self._fch_devolucion - date.today()).days
         print(f"Universitario: {self._universitario.nombre}, Libro: {self._libro.titulo}, Fecha de prestamo: {self._fch_prestamo}, Fecha de devolucion: {self._fch_devolucion}, Dias restantes: {dias_restantes}")
         if dias_restantes < 0:
-            print("El libro está atrasado.")    
+            print("El libro está atrasado.")
+
+    def save(self):
+        conn = sqlite3.connect('biblioteca.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO prestamos (universitario_id, libro_id, dias, fch_prestamo, fch_devolucion) VALUES (?, ?, ?, ?, ?)", (self._universitario.id, self._libro.id, self._dias, self._fch_prestamo, self._fch_devolucion))
+        self.id = c.lastrowid
+        conn.commit()
+        conn.close()
         
 
 
