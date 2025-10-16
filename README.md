@@ -27,3 +27,11 @@ Usar unititest, para probar las funciones más facil
     import unittest
 
 Usar SonarQube, para ver la calidad del codigo
+
+# Crear Entorno Virtual
+python3 -m venv .venv
+python -m venv .venv
+    ACTIVAR
+    .venv\scripts\activate
+    DESACTIVAR
+    desactivate

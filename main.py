@@ -1,4 +1,7 @@
 from datetime import datetime, timedelta, date # Importante, para saber cuando se tiene que devolver el libro
+import sqlite3
+import clases
+import BD
 
 def menu():
     print("""

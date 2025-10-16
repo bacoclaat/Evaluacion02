@@ -31,8 +31,21 @@ class Usuario:
             raise ValueError("La contraseña contiene caracteres no compatibles con latin-1.") # Latin-1 solo permite letras acentuadas, signos y simbolos especiales, Loggear error
         
     def mostrar_info(self):
-        print(f"Nombre: {self.nombre}, Email: {self._email}", end="")
-        
+        conn = sqlite3.connect('biblioteca.db')
+        c = conn.cursor()
+        c.execute("SELECT id, nombre, email from usuarios where email = ?", (self._email,))
+        fila = c.fetchone()
+        conn.close()
+
+        if fila:
+            id_usuario, nombre, email = fila
+            print(f"ID: {id_usuario}")
+            print(f"Nombre: {nombre}")
+            print(f"Email: {email}")
+        else:
+            print("Usuario no encontrado.")
+
+
     def verificar_password(self, password):
         return bcrypt.checkpw(password.encode('latin-1'), self._password_hash)
     
@@ -96,7 +109,10 @@ class Admin(Usuario):
         conn.commit()
         conn.close()
 
+# Hacer esto !!!!!!
     def modificar_usuario(self):
+        buscar = input("Deme el id del usuario que desea modificar: ")
+
         
 
         
@@ -165,4 +181,6 @@ class Prestamo:
         conn.close()
         
 
-
+pepe = Usuario("baco","iiii@gmail.com","blablabla")
+pepe.save()
+pepe.mostrar_info()
