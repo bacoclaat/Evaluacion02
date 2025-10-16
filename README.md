@@ -35,3 +35,6 @@ python -m venv .venv
     .venv\scripts\activate
     DESACTIVAR
     desactivate
+
+# IMPORTANTE
+Cuando entreguemos la base de datos hay que dejar por lo menos 1 usuario admin generico, Ejemplo: Nombre: admin Contraseña: admin123

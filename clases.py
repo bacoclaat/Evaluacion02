@@ -66,8 +66,20 @@ class Bibliotecario(Usuario):
             self.universidad = universidad
     
     def mostrar_info(self):
-        super().mostrar_info() 
-        print(f", Universidad: {self.universidad}")
+        conn = sqlite3.connect('biblioteca.db')
+        c = conn.cursor()
+        c.execute("SELECT id, nombre, email, universidad from usuarios where email = ?", (self._email,))
+        fila = c.fetchone()
+        conn.close()
+
+        if fila:
+            id_usuario, nombre, email, universidad = fila
+            print(f"ID: {id_usuario}")
+            print(f"Nombre: {nombre}")
+            print(f"Email: {email}")
+            print(f"Universidad: {universidad}")
+        else:
+            print("Usuario no encontrado.")
 
     def save(self):
         super().save()
@@ -86,6 +98,23 @@ class Universitario(Usuario):
         else:
             self.universidad = universidad
 
+
+    def mostrar_info(self):
+        conn = sqlite3.connect('biblioteca.db')
+        c = conn.cursor()
+        c.execute("SELECT id, nombre, email, universidad from usuarios where email = ?", (self._email,))
+        fila = c.fetchone()
+        conn.close()
+
+        if fila:
+            id_usuario, nombre, email, universidad = fila
+            print(f"ID: {id_usuario}")
+            print(f"Nombre: {nombre}")
+            print(f"Email: {email}")
+            print(f"Universidad: {universidad}")
+        else:
+            print("Usuario no encontrado.")
+
     def save(self):
         super().save()
         conn = sqlite3.connect('biblioteca.db')
@@ -100,6 +129,9 @@ class Universitario(Usuario):
 class Admin(Usuario):
     def __init__(self,nombre,password):
         super().__init__(nombre,password)
+
+    def mostrar_info(self):
+        return super().mostrar_info()
 
     def save(self):
         super().save()
@@ -181,6 +213,3 @@ class Prestamo:
         conn.close()
         
 
-pepe = Usuario("baco","iiii@gmail.com","blablabla")
-pepe.save()
-pepe.mostrar_info()
