@@ -179,8 +179,33 @@ class Admin(Usuario):
 
 # Hacer esto !!!!!!
     def modificar_usuario(self):
-        buscar = input("Deme el id del usuario que desea modificar: ")
-
+        buscar = input("Ingrese el ID del usuario que desea modificar: ").strip()
+        conn = sqlite3.connect('biblioteca.db')
+        c = conn.cursor()
+        c.execute("SELECT id, nombre, email, tipo FROM usuarios WHERE id = ?", (buscar,))
+        fila = c.fetchone()
+        if not fila:
+            conn.close()
+            raise ValueError("El usuario no existe.")
+        id_usuario, nombre, email, tipo = fila
+        print(f"\nID: {id_usuario}\nNombre: {nombre}\nEmail: {email}\nTipo: {tipo}")
+        if tipo == "universitario":
+            c.execute("SELECT universidad FROM universitarios WHERE usuario_id = ?", (id_usuario,))
+            fila_uni = c.fetchone()
+            if fila_uni:
+                print(f"Universidad: {fila_uni[0]}")
+            else:
+                print("No se encontró universidad asociada.")
+        elif tipo == "bibliotecario":
+            c.execute("SELECT universidad FROM bibliotecarios WHERE usuario_id = ?", (id_usuario,))
+            fila_bib = c.fetchone()
+            if fila_bib:
+                print(f"Universidad: {fila_bib[0]}")
+            else:
+                print("No se encontró universidad asociada.")
+        else:
+            print("Este usuario no tiene universidad asociada (tipo admin).")
+        conn.close()
         
 
         

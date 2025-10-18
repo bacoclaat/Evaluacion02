@@ -87,6 +87,16 @@ while True:
             usuario_logeado = clases.Usuario(nombre, email, password)
         conn.close()
         usuario_logeado.id = id_usuario
+        # Aquí se podría agregar el menú específico para cada tipo de usuario
+        if tipo == "universitario":
+            print("Menú Universitario")
+            # Agregar funcionalidades específicas para universitarios
+        elif tipo == "bibliotecario":
+            print("Menú Bibliotecario")
+            # Agregar funcionalidades específicas para bibliotecarios
+        elif tipo == "admin":
+            print("Menú Admin")
+            # Agregar funcionalidades específicas para admin
     elif opcion == 3:
         print("Saliendo del sistema.")
         break
