@@ -52,10 +52,16 @@ class Usuario:
     def save(self):
         conn = sqlite3.connect('biblioteca.db')
         c = conn.cursor()
-        c.execute("INSERT INTO usuarios (nombre, email, password_hash, tipo) VALUES (?, ?, ?, 'usuario')", (self.nombre, self._email, self._password_hash))
-        self.id = c.lastrowid
-        conn.commit()
-        conn.close()
+        c.execute("SELECT id FROM usuarios WHERE email = ?", (self._email,))
+        fila = c.fetchone()
+        if fila:
+            conn.close()
+            raise ValueError("El usuario ya está registrado.")
+        else:
+            c.execute("INSERT INTO usuarios (nombre, email, password_hash, tipo) VALUES (?, ?, ?, 'usuario')", (self.nombre, self._email, self._password_hash))
+            self.id = c.lastrowid
+            conn.commit()
+            conn.close()
     
 class Bibliotecario(Usuario):
     def __init__(self,nombre,email,password,universidad):
@@ -82,13 +88,22 @@ class Bibliotecario(Usuario):
             print("Usuario no encontrado.")
 
     def save(self):
-        super().save()
         conn = sqlite3.connect('biblioteca.db')
         c = conn.cursor()
-        c.execute("INSERT INTO bibliotecarios (usuario_id, universidad) VALUES (?, ?)", (self.id, self.universidad))
+        c.execute("SELECT id FROM usuarios WHERE email = ?", (self._email,))
+        fila = c.fetchone()
+        if not fila:
+            super().save()
+            usuario_id = self.id
+        else:
+            usuario_id = fila[0]
+        c.execute("SELECT usuario_id FROM bibliotecarios WHERE usuario_id = ?", (usuario_id,))
+        if c.fetchone():
+            raise ValueError("El usuario ya está registrado como bibliotecario.")
+        c.execute("INSERT INTO bibliotecarios (usuario_id, universidad) VALUES (?, ?)", (usuario_id, self.universidad))
+        c.execute("UPDATE usuarios SET tipo = 'bibliotecario' WHERE id = ?", (usuario_id,))
         conn.commit()
         conn.close()
-        c.execute("UPDATE usuarios SET tipo = 'bibliotecario' WHERE id = ?", (self.id,))
 
 class Universitario(Usuario):
     def __init__(self,nombre,email,password,universidad):
@@ -116,13 +131,23 @@ class Universitario(Usuario):
             print("Usuario no encontrado.")
 
     def save(self):
-        super().save()
         conn = sqlite3.connect('biblioteca.db')
         c = conn.cursor()
-        c.execute("INSERT INTO universitarios (usuario_id, universidad) VALUES (?, ?)", (self.id, self.universidad))
+        c.execute("SELECT id FROM usuarios WHERE email = ?", (self._email,))
+        fila = c.fetchone()
+        if not fila:
+            super().save()
+            usuario_id = self.id
+        else:
+            usuario_id = fila[0]
+        c.execute("SELECT usuario_id FROM universitarios WHERE usuario_id = ?", (usuario_id,))
+        if c.fetchone():
+            raise ValueError("El usuario ya está registrado como universitario.")
+        c.execute("INSERT INTO universitarios (usuario_id, universidad) VALUES (?, ?)", (usuario_id, self.universidad))
+        c.execute("UPDATE usuarios SET tipo = 'universitario' WHERE id = ?", (usuario_id,))
         conn.commit()
         conn.close()
-        c.execute("UPDATE usuarios SET tipo = 'universitario' WHERE id = ?", (self.id,))
+
 
 # El admin debe poder modificar los usuarios, eliminar usuarios, modificar usuarios
 # Tenemos que tener ya una cuenta generica de admin (Ej: Nombre: Admin ,Contraseña: admin123)
@@ -134,12 +159,23 @@ class Admin(Usuario):
         return super().mostrar_info()
 
     def save(self):
-        super().save()
         conn = sqlite3.connect('biblioteca.db')
         c = conn.cursor()
-        c.execute("UPDATE usuarios SET tipo = 'admin' WHERE id = ?", (self.id,))
+        c.execute("SELECT id FROM usuarios WHERE email = ?", (self._email,))
+        fila = c.fetchone()
+        if not fila:
+            super().save()
+            usuario_id = self.id
+        else:
+            usuario_id = fila[0]
+        c.execute("SELECT usuario_id FROM admin WHERE usuario_id = ?", (usuario_id,))
+        if c.fetchone():
+            raise ValueError("El usuario ya está registrado como administrador.")
+        c.execute("INSERT INTO admin (usuario_id) VALUES (?)", (usuario_id,))
+        c.execute("UPDATE usuarios SET tipo = 'admin' WHERE id = ?", (usuario_id,))
         conn.commit()
         conn.close()
+
 
 # Hacer esto !!!!!!
     def modificar_usuario(self):
@@ -182,10 +218,16 @@ class Libro:
     def save(self):
         conn = sqlite3.connect('biblioteca.db')
         c = conn.cursor()
-        c.execute("INSERT INTO libros (titulo, autor, genero, año, cantidad, isbn) VALUES (?, ?, ?, ?, ?, ?)", (self.titulo, self.autor, self.genero, self.año, self.cantidad, self.isbn))
-        self.id = c.lastrowid
-        conn.commit()
-        conn.close()
+        c.execute("SELECT id FROM libros WHERE isbn = ?", (self.isbn,))
+        fila = c.fetchone()
+        if fila:
+            conn.close()
+            raise ValueError("Ya existe un libro con ese ISBN.")
+        else:
+            c.execute("INSERT INTO libros (titulo, autor, genero, año, cantidad, isbn) VALUES (?, ?, ?, ?, ?, ?)", (self.titulo, self.autor, self.genero, self.año, self.cantidad, self.isbn))
+            self.id = c.lastrowid
+            conn.commit()
+            conn.close()
 
 # Terminar esto, no esta listo
 class Prestamo:
@@ -207,9 +249,26 @@ class Prestamo:
     def save(self):
         conn = sqlite3.connect('biblioteca.db')
         c = conn.cursor()
-        c.execute("INSERT INTO prestamos (universitario_id, libro_id, dias, fch_prestamo, fch_devolucion) VALUES (?, ?, ?, ?, ?)", (self._universitario.id, self._libro.id, self._dias, self._fch_prestamo, self._fch_devolucion))
-        self.id = c.lastrowid
-        conn.commit()
-        conn.close()
+        c.execute("SELECT id FROM universitarios WHERE id = ?", (self._universitario.id,))
+        if not c.fetchone():
+            conn.close()
+            raise ValueError("El universitario no existe en la base de datos.")
+        else:
+            c.execute("SELECT cantidad FROM libros WHERE id = ?", (self._libro.id,))
+            fila = c.fetchone()
+        if not fila:
+            conn.close()
+            raise ValueError("El libro no existe.")
+        else:
+            cantidad = fila[0]
+            if cantidad <= 0:
+                conn.close()
+                raise ValueError("No hay copias disponibles de este libro.")
+            else:
+                c.execute("INSERT INTO prestamos (universitario_id, libro_id, dias, fch_prestamo, fch_devolucion) VALUES (?, ?, ?, ?, ?)", (self._universitario.id, self._libro.id, self._dias, self._fch_prestamo, self._fch_devolucion))
+                self.id = c.lastrowid
+                c.execute("UPDATE libros SET cantidad = cantidad - 1 WHERE id = ?", (self._libro.id,))
+                conn.commit()
+                conn.close()
         
 
