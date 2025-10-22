@@ -8,89 +8,95 @@ BD.init_db()
 
 def reglogin():
     while True:
-        print("=== Registrar/Login ===")
-        print("1. Registrar")
-        print("2. Login")
-        print("3. Salir")
-        opcion = int(input("Seleccione una opción: "))
-        if opcion == 1:
-            try:
-                nombre = input("Ingrese su nombre: ")
-                email = input("Ingrese su email: ")
-                password = input("Ingrese su contraseña: ")
-                usuario_nuevo = clases.Usuario(nombre, email, password)
-            except ValueError as ve:
-                print(f"Error en el registro: {ve}")
-                continue
-            print("Usuario registrado exitosamente.")
-            print("Es usted un universitario o un bibliotecario?")
-            print("1. Universitario")
-            print("2. Bibliotecario")
-            print("3. Volver")
-            tipo_usuario = int(input("Seleccione una opción: "))
-            if tipo_usuario == 1:
+        try:
+            print("=== Registrar/Login ===")
+            print("1. Registrar")
+            print("2. Login")
+            print("3. Salir")
+            opcion = int(input("Seleccione una opción: "))
+
+            if opcion == 1:
                 try:
-                    universidad = input("Ingrese su universidad: ")
-                    usuario_universitario = clases.Universitario(nombre, email, password, universidad)
-                    usuario_universitario.save()
-                    print("Usuario actualizado a universitario exitosamente.")
+                    nombre = input("Ingrese su nombre: ")
+                    email = input("Ingrese su email: ")
+                    password = input("Ingrese su contraseña: ")
+                    usuario_nuevo = clases.Usuario(nombre, email, password)
                 except ValueError as ve:
                     print(f"Error en el registro: {ve}")
                     continue
-            elif tipo_usuario == 2:
-                try:
-                    universidad = input("Ingrese su universidad: ")
-                    usuario_bibliotecario = clases.Bibliotecario(nombre, email, password, universidad)
-                    usuario_bibliotecario.save()
-                    print("Usuario actualizado a bibliotecario exitosamente.")
-                except ValueError as ve:
-                    print(f"Error en el registro: {ve}")
+                print("Usuario registrado exitosamente.")
+                print("Es usted un universitario o un bibliotecario?")
+                print("1. Universitario")
+                print("2. Bibliotecario")
+                print("3. Volver")
+                tipo_usuario = int(input("Seleccione una opción: "))
+                if tipo_usuario == 1:
+                    try:
+                        universidad = input("Ingrese su universidad: ")
+                        usuario_universitario = clases.Universitario(nombre, email, password, universidad)
+                        usuario_universitario.save()
+                        print("Usuario actualizado a universitario exitosamente.")
+                    except ValueError as ve:
+                        print(f"Error en el registro: {ve}")
+                        continue
+                elif tipo_usuario == 2:
+                    try:
+                        universidad = input("Ingrese su universidad: ")
+                        usuario_bibliotecario = clases.Bibliotecario(nombre, email, password, universidad)
+                        usuario_bibliotecario.save()
+                        print("Usuario actualizado a bibliotecario exitosamente.")
+                    except ValueError as ve:
+                        print(f"Error en el registro: {ve}")
+                        continue
+                elif tipo_usuario == 3:
                     continue
-            elif tipo_usuario == 3:
-                continue
-            else:
-                print("Opción inválida.")
-        elif opcion == 2:
-            email = input("Ingrese su email: ").strip()
-            password = input("Ingrese su contraseña: ").strip()
-            conn = sqlite3.connect('biblioteca.db')
-            c = conn.cursor()
-            c.execute("SELECT id, nombre, email, password_hash, tipo FROM usuarios WHERE email = ?", (email,))
-            fila = c.fetchone()
-            if not fila:
-                print("Usuario no encontrado.")
-                continue
-            id_usuario, nombre, email, password_hash, tipo = fila
-            if not bcrypt.checkpw(password.encode('latin-1'), password_hash):
-                print("Contraseña incorrecta.")
-                continue
-            print(f"Bienvenido {nombre}, has iniciado sesión como {tipo}.")
-            # Esto crea el objeto usuario_logeado adecuado según el tipo, para poder hacer cambios y operaciones correspondientes
-            universidad = None
-            conn = sqlite3.connect('biblioteca.db')
-            c = conn.cursor()
-            if tipo == "universitario":
-                c.execute("SELECT universidad FROM universitarios WHERE usuario_id = ?", (id_usuario,))
+                else:
+                    print("Opción inválida.")
+            elif opcion == 2:
+                email = input("Ingrese su email: ").strip()
+                password = input("Ingrese su contraseña: ").strip()
+                conn = sqlite3.connect('biblioteca.db')
+                c = conn.cursor()
+                c.execute("SELECT id, nombre, email, password_hash, tipo FROM usuarios WHERE email = ?", (email,))
                 fila = c.fetchone()
-                if fila:
-                    universidad = fila[0]
-                usuario_logeado = clases.Universitario(nombre, email, password, universidad)
-            elif tipo == "bibliotecario":
-                c.execute("SELECT universidad FROM bibliotecarios WHERE usuario_id = ?", (id_usuario,))
-                fila = c.fetchone()
-                if fila:
-                    universidad = fila[0]
-                usuario_logeado = clases.Bibliotecario(nombre, email, password, universidad)
-            elif tipo == "admin":
-                usuario_logeado = clases.Admin(nombre, password)
+                if not fila:
+                    print("Usuario no encontrado.")
+                    continue
+                id_usuario, nombre, email, password_hash, tipo = fila
+                if not bcrypt.checkpw(password.encode('latin-1'), password_hash):
+                    print("Contraseña incorrecta.")
+                    continue
+                print(f"Bienvenido {nombre}, has iniciado sesión como {tipo}.")
+                # Esto crea el objeto usuario_logeado adecuado según el tipo, para poder hacer cambios y operaciones correspondientes
+                universidad = None
+                conn = sqlite3.connect('biblioteca.db')
+                c = conn.cursor()
+                if tipo == "universitario":
+                    c.execute("SELECT universidad FROM universitarios WHERE usuario_id = ?", (id_usuario,))
+                    fila = c.fetchone()
+                    if fila:
+                        universidad = fila[0]
+                    usuario_logeado = clases.Universitario(nombre, email, password, universidad)
+                elif tipo == "bibliotecario":
+                    c.execute("SELECT universidad FROM bibliotecarios WHERE usuario_id = ?", (id_usuario,))
+                    fila = c.fetchone()
+                    if fila:
+                        universidad = fila[0]
+                    usuario_logeado = clases.Bibliotecario(nombre, email, password, universidad)
+                elif tipo == "admin":
+                    usuario_logeado = clases.Admin(nombre,email, password)
+                else:
+                    usuario_logeado = clases.Usuario(nombre, email, password)
+                conn.close()
+                usuario_logeado.id = id_usuario
+                return tipo, usuario_logeado
+            elif opcion == 3:
+                print("Saliendo del sistema.")
+                exit()
             else:
-                usuario_logeado = clases.Usuario(nombre, email, password)
-            conn.close()
-            usuario_logeado.id = id_usuario
-            return tipo, usuario_logeado
-        elif opcion == 3:
-            print("Saliendo del sistema.")
-            exit()
+                print("Porfavor ingrese una opcion correcta.")
+        except ValueError:
+            print("Porfavor ingrese un numero.")
 
 
 def ver_libros_disponibles():
@@ -199,7 +205,7 @@ def menu_universitario(usuario_logeado):
                             print("No tienes préstamos activos.")
 
                     elif opcion_prestamo == 3:
-                        break
+                        continue
                     else:
                         print("Opción inválida.")
             elif opcion == 3:
@@ -220,7 +226,6 @@ def menu_bibliotecario(usuario_logeado):
         print("2. Gestionar préstamos")
         print("3. Información de la cuenta")
         print("4. Cerrar sesión")
-        input_opcion = int(input("Seleccione una opción: "))
         try:
             input_opcion = int(input("Seleccione una opción: "))
 
@@ -258,7 +263,7 @@ def menu_bibliotecario(usuario_logeado):
                         if libros:
                             print("=== Libros en la biblioteca ===")
                             for id_libro, titulo, autor, cantidad in libros:
-                                print(f"{id_libro}. {titulo} - {autor} | Copias: {cantidad}")
+                                print(f"ID: {id_libro}. {titulo} - {autor} | Copias: {cantidad}")
                         else:
                             print("No hay libros registrados.")
 

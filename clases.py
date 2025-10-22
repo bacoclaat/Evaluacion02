@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, date
 patron_email = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
 patron_nombre = r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü\s]+$' # Solo letras y espacios
 patron_nombre_libro = r'^[A-Za-zÁÉÍÓÚáéíóúÑñÜü0-9\s]+$' # Solo letras, numeros y espacios
-patron_isbn = r'^(?:\d{9}[\dXx]|\d{13}|\d{3}-\d{1,5}-\d{1,7}-\d{1,7}-[\dXx])$' # ISBN (Identificador unico para libros)
+patron_isbn = r"^(?:\d{9}[\dXx]|\d{13}|\d{3}-\d{1,5}-\d{1,7}-\d{1,6}-[\dXx])$" # ISBN (Identificador unico para libros)
 
 class Usuario:
     def __init__(self,nombre,email,password):
@@ -73,18 +73,25 @@ class Bibliotecario(Usuario):
     def mostrar_info(self):
         conn = sqlite3.connect('biblioteca.db')
         c = conn.cursor()
-        c.execute("SELECT id, nombre, email, universidad from usuarios where email = ?", (self._email,))
+        
+        c.execute("SELECT id, nombre, email FROM usuarios WHERE email = ? AND tipo = 'bibliotecario'", (self._email,))
         fila = c.fetchone()
-        conn.close()
-
+        
         if fila:
-            id_usuario, nombre, email, universidad = fila
+            id_usuario, nombre, email = fila
+            c.execute("SELECT universidad FROM bibliotecarios WHERE usuario_id = ?", (id_usuario,))
+            fila_bib = c.fetchone()
+            universidad = fila_bib[0] if fila_bib else "No registrada"
+            
             print(f"ID: {id_usuario}")
             print(f"Nombre: {nombre}")
             print(f"Email: {email}")
             print(f"Universidad: {universidad}")
         else:
-            print("Usuario no encontrado.")
+            print("Usuario no encontrado o no es bibliotecario.")
+        
+        conn.close()
+
 
     def save(self):
         conn = sqlite3.connect('biblioteca.db')
@@ -98,7 +105,7 @@ class Bibliotecario(Usuario):
             usuario_id = fila[0]
         c.execute("SELECT usuario_id FROM bibliotecarios WHERE usuario_id = ?", (usuario_id,))
         if c.fetchone():
-            raise ValueError("El usuario ya está registrado como bibliotecario.")
+            raise ValueError("El usuario ya está registrado.")
         c.execute("INSERT INTO bibliotecarios (usuario_id, universidad) VALUES (?, ?)", (usuario_id, self.universidad))
         c.execute("UPDATE usuarios SET tipo = 'bibliotecario' WHERE id = ?", (usuario_id,))
         conn.commit()
@@ -146,7 +153,7 @@ class Universitario(Usuario):
             usuario_id = fila[0]
         c.execute("SELECT usuario_id FROM universitarios WHERE usuario_id = ?", (usuario_id,))
         if c.fetchone():
-            raise ValueError("El usuario ya está registrado como universitario.")
+            raise ValueError("El usuario ya está registrado.")
         c.execute("INSERT INTO universitarios (usuario_id, universidad) VALUES (?, ?)", (usuario_id, self.universidad))
         c.execute("UPDATE usuarios SET tipo = 'universitario' WHERE id = ?", (usuario_id,))
         conn.commit()
@@ -157,8 +164,8 @@ class Universitario(Usuario):
 
 # Tenemos que tener ya una cuenta generica de admin (Ej: Nombre: Admin ,Contraseña: admin123)
 class Admin(Usuario):
-    def __init__(self,nombre,password):
-        super().__init__(nombre,password)
+    def __init__(self,nombre,email,password):
+        super().__init__(nombre,email,password) # Prueba
 
     def mostrar_info(self):
         return super().mostrar_info()
@@ -175,7 +182,7 @@ class Admin(Usuario):
             usuario_id = fila[0]
         c.execute("SELECT usuario_id FROM admin WHERE usuario_id = ?", (usuario_id,))
         if c.fetchone():
-            raise ValueError("El usuario ya está registrado como administrador.")
+            raise ValueError("El usuario ya está registrado.")
         c.execute("INSERT INTO admin (usuario_id) VALUES (?)", (usuario_id,))
         c.execute("UPDATE usuarios SET tipo = 'admin' WHERE id = ?", (usuario_id,))
         conn.commit()

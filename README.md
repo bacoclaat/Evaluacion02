@@ -37,4 +37,4 @@ python -m venv .venv
     desactivate
 
 # IMPORTANTE
-Cuando entreguemos la base de datos hay que dejar por lo menos 1 usuario admin generico, Ejemplo: Nombre: admin Contraseña: admin123
+Cuando entreguemos la base de datos hay que dejar por lo menos 1 usuario admin generico, Ejemplo: Nombre: Admin Email: admin@gmail.com Contraseña: admin123
