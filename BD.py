@@ -49,4 +49,4 @@ def init_db():
     conn.close()
 
 init_db()
-print("Base de datos creada exitosamente.")
+print("Base de datos cargada exitosamente.")

@@ -117,18 +117,23 @@ class Universitario(Usuario):
     def mostrar_info(self):
         conn = sqlite3.connect('biblioteca.db')
         c = conn.cursor()
-        c.execute("SELECT id, nombre, email, universidad from usuarios where email = ?", (self._email,))
+        # Obtenemos datos básicos de la tabla usuarios
+        c.execute("SELECT id, nombre, email FROM usuarios WHERE email = ?", (self._email,))
         fila = c.fetchone()
-        conn.close()
-
         if fila:
-            id_usuario, nombre, email, universidad = fila
+            id_usuario, nombre, email = fila
+            # Obtenemos universidad de la tabla universitarios
+            c.execute("SELECT universidad FROM universitarios WHERE usuario_id = ?", (id_usuario,))
+            fila_uni = c.fetchone()
+            universidad = fila_uni[0] if fila_uni else "No registrada"
             print(f"ID: {id_usuario}")
             print(f"Nombre: {nombre}")
             print(f"Email: {email}")
             print(f"Universidad: {universidad}")
         else:
             print("Usuario no encontrado.")
+        conn.close()
+
 
     def save(self):
         conn = sqlite3.connect('biblioteca.db')
@@ -147,6 +152,7 @@ class Universitario(Usuario):
         c.execute("UPDATE usuarios SET tipo = 'universitario' WHERE id = ?", (usuario_id,))
         conn.commit()
         conn.close()
+
 
 
 # El admin debe poder modificar los usuarios, eliminar usuarios, modificar usuarios
@@ -177,7 +183,7 @@ class Admin(Usuario):
         conn.close()
 
 
-# Hacer esto !!!!!!
+
     def modificar_usuario(self):
         buscar = input("Ingrese el ID del usuario que desea modificar: ").strip()
         conn = sqlite3.connect('biblioteca.db')
