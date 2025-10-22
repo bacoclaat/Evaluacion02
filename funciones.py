@@ -226,7 +226,7 @@ def menu_bibliotecario(usuario_logeado):
 
             if input_opcion == 1:
                 while True:
-                    print("\n--- Gestión de Libros ---")
+                    print("--- Gestión de Libros ---")
                     print("1. Agregar libro")
                     print("2. Ver libros")
                     print("3. Modificar libro")
