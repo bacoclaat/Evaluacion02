@@ -268,7 +268,18 @@ class Libro:
 
 
 class Prestamo:
-    def __init__(self,universitario,libro,dias):
+    def __init__(self, universitario, libro, dias):
+        # Maximo 14 dias de prestamo
+        try:
+            dias = int(dias)
+        except ValueError:
+            raise ValueError("La cantidad de días debe ser un número entero.")
+        
+        if dias <= 0:
+            raise ValueError("El préstamo debe ser por al menos 1 día.")
+        if dias > 14:
+            raise ValueError("El préstamo no puede ser por más de 14 días (2 semanas).")
+
         self._universitario = universitario
         self._libro = libro
         self._dias = dias
@@ -286,7 +297,7 @@ class Prestamo:
     def save(self):
         conn = sqlite3.connect('biblioteca.db')
         c = conn.cursor()
-        c.execute("SELECT id FROM universitarios WHERE id = ?", (self._universitario.id,))
+        c.execute("SELECT id FROM usuarios WHERE id = ? AND tipo = 'universitario'", (self._universitario.id,))
         if not c.fetchone():
             conn.close()
             raise ValueError("El universitario no existe en la base de datos.")

@@ -1,6 +1,9 @@
 # Evaluacion02
 Se necesita diseñar e implementar un sistema para gestionar una biblioteca universitaria donde permita registrar y consultar libros, llevar un control de préstamos y devoluciones realizados por los usuarios para facilitar el control de la biblioteca.
 
+# ADMIN
+Nombre: Admin Email: admin@gmail.com Contraseña: admin123
+
 # Flask
 Flask (microframework de python)
 pip install flask
@@ -35,6 +38,3 @@ python -m venv .venv
     .venv\scripts\activate
     DESACTIVAR
     desactivate
-
-# IMPORTANTE
-Cuando entreguemos la base de datos hay que dejar por lo menos 1 usuario admin generico, Ejemplo: Nombre: Admin Email: admin@gmail.com Contraseña: admin123
