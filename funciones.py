@@ -110,7 +110,7 @@ def ver_libros_disponibles():
         print("=== Libros disponibles ===")
         for libro in libros:
             id_libro, titulo, autor, cantidad = libro
-            print(f"{id_libro}. {titulo} - {autor} | Copias disponibles: {cantidad}")
+            print(f"ID: {id_libro}. {titulo} - {autor} | Copias disponibles: {cantidad}")
         return libros
     else:
         print("No hay libros disponibles.")
@@ -127,96 +127,102 @@ def menu_universitario(usuario_logeado):
         try:
             opcion = int(input("Seleccione una opción: "))
             if opcion == 1:
-                    print("1. Ver libros disponibles")
-                    print("2. Buscar libro por título")
-                    try:
-                        input_opcion = int(input("Seleccione una opción: "))
-                        if input_opcion == 1:
-                            ver_libros_disponibles()
-                        elif input_opcion == 2:
-                            titulo_buscar = input("Ingrese el título del libro a buscar: ").strip()
-                            conn = sqlite3.connect('biblioteca.db')
-                            c = conn.cursor()
-                            c.execute("SELECT id, titulo, autor, cantidad FROM libros WHERE titulo LIKE ?", ('%' + titulo_buscar + '%',))
-                            libros_encontrados = c.fetchall()
-                            conn.close()
-                            if libros_encontrados:
-                                print("=== Resultados de la búsqueda ===")
-                                for libro in libros_encontrados:
-                                    id_libro, titulo, autor, cantidad = libro
-                                    print(f"{id_libro}. {titulo} - {autor} | Copias disponibles: {cantidad}")
-                            else:
-                                print("No se encontraron libros con ese título.")
-                    except ValueError:
-                        print("Por favor, ingrese un número válido.")
-            elif opcion == 2:
-                    print("1. Ver mis préstamos")
-                    print("2. Realizar un préstamo")
-                    print("3. Volver")
-                    opcion_prestamo = int(input("Seleccione una opción: "))
-                    if opcion_prestamo == 2:
-                        libros = ver_libros_disponibles()
-                        if not libros:
-                            continue
-                        try:
-                            id_libro = int(input("Ingrese el ID del libro que desea prestar: "))
-                            dias = int(input("Ingrese la cantidad de días del préstamo: "))
-                            libro_seleccionado = None
-                            for libro in libros:
-                                if libro[0] == id_libro:
-                                    id_libro, titulo, autor, cantidad = libro
-                                    # Traemos todos los datos reales del libro desde la BD
-                                    conn = sqlite3.connect("biblioteca.db")
-                                    c = conn.cursor()
-                                    c.execute("SELECT titulo, autor, genero, año, cantidad, isbn FROM libros WHERE id = ?", (id_libro,))
-                                    fila = c.fetchone()
-                                    conn.close()
-                                    if fila:
-                                        titulo, autor, genero, año, cantidad_real, isbn = fila
-                                        libro_seleccionado = clases.Libro(titulo, autor, genero, año, cantidad_real, isbn)
-                                        libro_seleccionado.id = id_libro
-                                    break
-                            if not libro_seleccionado:
-                                print("ID de libro inválido.")
-                                continue
-                            prestamo = clases.Prestamo(usuario_logeado, libro_seleccionado, dias)
-                            prestamo.save()
-                            print(f"Préstamo realizado: {libro_seleccionado.titulo} por {dias} días.")
-                        except ValueError as ve:
-                            print(f"Error: {ve}")
-                    elif opcion_prestamo == 1:
-                        conn = sqlite3.connect("biblioteca.db")
+                print("1. Ver libros disponibles")
+                print("2. Buscar libro por título")
+                try:
+                    input_opcion = int(input("Seleccione una opción: "))
+                    if input_opcion == 1:
+                        ver_libros_disponibles()
+                    elif input_opcion == 2:
+                        titulo_buscar = input("Ingrese el título del libro a buscar: ").strip()
+                        conn = sqlite3.connect('biblioteca.db')
                         c = conn.cursor()
-                        c.execute("""
-                            SELECT libros.titulo, libros.autor, prestamos.fch_prestamo, prestamos.fch_devolucion
-                            FROM prestamos
-                            JOIN libros ON prestamos.libro_id = libros.id
-                            WHERE prestamos.universitario_id = ?
-                        """, (usuario_logeado.id,))
-                        prestamos = c.fetchall()
+                        c.execute("SELECT id, titulo, autor, cantidad FROM libros WHERE titulo LIKE ?", ('%' + titulo_buscar + '%',))
+                        libros_encontrados = c.fetchall()
                         conn.close()
-                        if prestamos:
-                            print("=== Mis préstamos ===")
-                            for libro, autor, fch_prestamo, fch_devolucion in prestamos:
-                                dias_restantes = (datetime.strptime(fch_devolucion, "%Y-%m-%d").date() - date.today()).days
-                                estado = "Atrasado" if dias_restantes < 0 else f"{dias_restantes} días restantes"
-                                print(f"{libro} - {autor} | Desde: {fch_prestamo} Hasta: {fch_devolucion} | {estado}")
+                        if libros_encontrados:
+                            print("=== Resultados de la búsqueda ===")
+                            for libro in libros_encontrados:
+                                id_libro, titulo, autor, cantidad = libro
+                                print(f"{id_libro}. {titulo} - {autor} | Copias disponibles: {cantidad}")
                         else:
-                            print("No tienes préstamos activos.")
+                            print("No se encontraron libros con ese título.")
+                except ValueError:
+                    print("Por favor, ingrese un número válido.")
 
-                    elif opcion_prestamo == 3:
+            elif opcion == 2:
+                print("1. Ver mis préstamos")
+                print("2. Realizar un préstamo")
+                print("3. Volver")
+                opcion_prestamo = int(input("Seleccione una opción: "))
+                if opcion_prestamo == 2:
+                    libros = ver_libros_disponibles()
+                    if not libros:
                         continue
+                    id_libro_str = input("Ingrese el ID del libro que desea prestar: ").strip()
+                    dias_str = input("Ingrese la cantidad de días del préstamo: ").strip()
+                    if not id_libro_str.isdigit():
+                        print("Debes ingresar un número válido para el ID del libro.")
+                        continue
+                    id_libro = int(id_libro_str)
+                    libro_seleccionado = None
+                    for libro in libros:
+                        if libro[0] == id_libro:
+                            conn = sqlite3.connect("biblioteca.db")
+                            c = conn.cursor()
+                            c.execute("SELECT titulo, autor, genero, año, cantidad, isbn FROM libros WHERE id = ?", (id_libro,))
+                            fila = c.fetchone()
+                            conn.close()
+                            if fila:
+                                titulo, autor, genero, año, cantidad_real, isbn = fila
+                                libro_seleccionado = clases.Libro(titulo, autor, genero, año, cantidad_real, isbn)
+                                libro_seleccionado.id = id_libro
+                            break
+                    if not libro_seleccionado:
+                        print("ID de libro inválido.")
+                        continue
+                    try:
+                        prestamo = clases.Prestamo(usuario_logeado, libro_seleccionado, dias_str)
+                        prestamo.save()
+                        print(f"Préstamo realizado: {libro_seleccionado.titulo} por {prestamo._dias} días.")
+                    except ValueError as ve:
+                        print(f"Error: {ve}")
+
+                elif opcion_prestamo == 1:
+                    conn = sqlite3.connect("biblioteca.db")
+                    c = conn.cursor()
+                    c.execute("""
+                        SELECT libros.titulo, libros.autor, prestamos.fch_prestamo, prestamos.fch_devolucion
+                        FROM prestamos
+                        JOIN libros ON prestamos.libro_id = libros.id
+                        WHERE prestamos.universitario_id = ?
+                    """, (usuario_logeado.id,))
+                    prestamos = c.fetchall()
+                    conn.close()
+                    if prestamos:
+                        print("=== Mis préstamos ===")
+                        for libro, autor, fch_prestamo, fch_devolucion in prestamos:
+                            dias_restantes = (datetime.strptime(fch_devolucion, "%Y-%m-%d").date() - date.today()).days
+                            estado = "Atrasado" if dias_restantes < 0 else f"{dias_restantes} días restantes"
+                            print(f"{libro} - {autor} | Desde: {fch_prestamo} Hasta: {fch_devolucion} | {estado}")
                     else:
-                        print("Opción inválida.")
-            elif opcion == 3:
-                    usuario_logeado.mostrar_info()
-            elif opcion == 4:
-                    print("Cerrando sesión.")
-                    break
-            else:
+                        print("No tienes préstamos activos.")
+
+                elif opcion_prestamo == 3:
+                    continue
+                else:
                     print("Opción inválida.")
+
+            elif opcion == 3:
+                usuario_logeado.mostrar_info()
+            elif opcion == 4:
+                print("Cerrando sesión.")
+                break
+            else:
+                print("Opción inválida.")
         except ValueError:
             print("Por favor, ingrese un número válido.")
+
 
 
 def menu_bibliotecario(usuario_logeado):
