@@ -418,25 +418,35 @@ def menu_admin(usuario_logeado):
 
                         conn = sqlite3.connect("biblioteca.db")
                         c = conn.cursor()
-                        c.execute("SELECT id, nombre, email, tipo FROM usuarios WHERE id = ?", (id_usuario,))
+                        c.execute("SELECT id, nombre, email, tipo, password_hash FROM usuarios WHERE id = ?", (id_usuario,))
                         usuario = c.fetchone()
                         if not usuario:
                             print("Usuario no encontrado.")
                             conn.close()
                             continue
 
-                        id_u, nombre, email, tipo = usuario
+                        id_u, nombre, email, tipo, password_hash = usuario
                         print(f"Usuario seleccionado: {nombre} - {email} | Tipo: {tipo}")
 
                         nuevo_nombre = input(f"Ingrese nuevo nombre (enter para mantener '{nombre}'): ").strip()
                         nuevo_email = input(f"Ingrese nuevo email (enter para mantener '{email}'): ").strip()
-
                         if nuevo_nombre == "":
                             nuevo_nombre = nombre
                         if nuevo_email == "":
                             nuevo_email = email
 
-                        c.execute("UPDATE usuarios SET nombre = ?, email = ? WHERE id = ?", (nuevo_nombre, nuevo_email, id_usuario))
+                        cambiar_pass = input("¿Desea cambiar la contraseña? (s/n): ").lower()
+                        if cambiar_pass == "s":
+                            nueva_pass = input("Ingrese la nueva contraseña: ").strip()
+                            if nueva_pass == "":
+                                nueva_pass_hash = password_hash
+                            else:
+                                nueva_pass_hash = bcrypt.hashpw(nueva_pass.encode('latin-1'), bcrypt.gensalt())
+                        else:
+                            nueva_pass_hash = password_hash
+
+                        c.execute("UPDATE usuarios SET nombre = ?, email = ?, password_hash = ? WHERE id = ?", 
+                                  (nuevo_nombre, nuevo_email, nueva_pass_hash, id_usuario))
 
                         if tipo == "universitario":
                             c.execute("SELECT universidad FROM universitarios WHERE usuario_id = ?", (id_usuario,))
@@ -476,13 +486,11 @@ def menu_admin(usuario_logeado):
                         nombre, tipo = usuario
                         confirm = input(f"¿Está seguro de eliminar '{nombre}'? (s/n): ").lower()
                         if confirm == 's':
-
                             if tipo == "universitario":
                                 c.execute("DELETE FROM prestamos WHERE universitario_id = ?", (id_usuario,))
                                 c.execute("DELETE FROM universitarios WHERE usuario_id = ?", (id_usuario,))
                             elif tipo == "bibliotecario":
                                 c.execute("DELETE FROM bibliotecarios WHERE usuario_id = ?", (id_usuario,))
-
                             c.execute("DELETE FROM usuarios WHERE id = ?", (id_usuario,))
                             conn.commit()
                             print("Usuario eliminado exitosamente.")
