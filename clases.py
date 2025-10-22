@@ -1,6 +1,5 @@
 import sqlite3
 import bcrypt
-import logging # Tengo que añadir un log para el error
 import re
 from datetime import datetime, timedelta, date
 
@@ -15,16 +14,16 @@ patron_isbn = r'^(?:\d{9}[\dXx]|\d{13}|\d{3}-\d{1,5}-\d{1,7}-\d{1,7}-[\dXx])$' #
 class Usuario:
     def __init__(self,nombre,email,password):
         if not re.match(patron_nombre, nombre):
-            raise ValueError("El nombre solo puede contener letras y espacios.") # Loggear error
+            raise ValueError("El nombre solo puede contener letras y espacios.") 
         else:
             self.nombre = nombre
         if not re.match(patron_email, email):
-            raise ValueError("El email no tiene un formato válido.") # Loggear error
+            raise ValueError("El email no tiene un formato válido.") 
         else:
             self._email = email
         try:
             if ' ' in password or password.strip() == "":
-                raise ValueError("La contraseña no puede contener espacios o estar vacia.") # Loggear error
+                raise ValueError("La contraseña no puede contener espacios o estar vacia.")
             else:
                 self._password_hash = bcrypt.hashpw(password.encode('latin-1'), bcrypt.gensalt()) # Hasheado con bcrypt, se usa verificar_password y tiene que lanzar un True.
         except UnicodeEncodeError:
@@ -67,7 +66,7 @@ class Bibliotecario(Usuario):
     def __init__(self,nombre,email,password,universidad):
         super().__init__(nombre, email, password)
         if not re.match(patron_nombre, universidad):
-            raise ValueError("El nombre de la universidad solo puede contener letras y espacios.") # Loggear error  
+            raise ValueError("El nombre de la universidad solo puede contener letras y espacios.") 
         else:
             self.universidad = universidad
     
@@ -109,7 +108,7 @@ class Universitario(Usuario):
     def __init__(self,nombre,email,password,universidad):
         super().__init__(nombre,email,password)
         if not re.match(patron_nombre, universidad):
-            raise ValueError("El nombre de la universidad solo puede contener letras y espacios.") # Loggear error  
+            raise ValueError("El nombre de la universidad solo puede contener letras y espacios.") 
         else:
             self.universidad = universidad
 
@@ -155,7 +154,7 @@ class Universitario(Usuario):
 
 
 
-# El admin debe poder modificar los usuarios, eliminar usuarios, modificar usuarios
+
 # Tenemos que tener ya una cuenta generica de admin (Ej: Nombre: Admin ,Contraseña: admin123)
 class Admin(Usuario):
     def __init__(self,nombre,password):
@@ -218,20 +217,20 @@ class Admin(Usuario):
 class Libro:
     def __init__(self,titulo,autor,genero,año,cantidad,isbn):
         if not re.match(patron_nombre_libro, titulo):
-            raise ValueError("El titulo solo puede contener letras, numeros y espacios.") # Loggear error
+            raise ValueError("El titulo solo puede contener letras, numeros y espacios.") 
         else:
             self.titulo = titulo
         if not re.match(patron_nombre, autor):
-            raise ValueError("El autor solo puede contener letras y espacios.") # Loggear error
+            raise ValueError("El autor solo puede contener letras y espacios.") 
         else:
             self.autor = autor
         if not re.match(patron_nombre, genero):
-            raise ValueError("El genero solo puede contener letras y espacios.") # Loggear error
+            raise ValueError("El genero solo puede contener letras y espacios.") 
         else:
             self.genero = genero
         año_actual = datetime.now().year
         if not re.match(r'^\d{4}$', str(año)) or not (1000 <= int(año) <= año_actual):
-            raise ValueError(f"Año inválido, debe estar entre 1000 y {año_actual}") # Se asegura que no puedan haber
+            raise ValueError(f"Año inválido, debe estar entre 1000 y {año_actual}") 
         else:
             self.año = int(año)
         try:
@@ -239,12 +238,12 @@ class Libro:
         except ValueError:
             raise ValueError("La cantidad tiene que ser un numero entero.")
         if not re.match(patron_isbn, isbn):
-            raise ValueError("El ISBN no tiene un formato válido.") # Loggear error
+            raise ValueError("El ISBN no tiene un formato válido.") 
         else:
             self.isbn = isbn
             
     def mostrar_info(self):
-        print(f"Título: {self.titulo}, Autor: {self.autor}, Género: {self.genero}, Año: {self.año}, Tipo: {self.tipo}, Cantidad: {self.cantidad}, ISBN: {self.isbn}") # Falta añadir la id que la da la base de datos
+        print(f"Título: {self.titulo}, Autor: {self.autor}, Género: {self.genero}, Año: {self.año}, Tipo: {self.tipo}, Cantidad: {self.cantidad}, ISBN: {self.isbn}") 
 
     def save(self):
         conn = sqlite3.connect('biblioteca.db')
@@ -260,7 +259,7 @@ class Libro:
             conn.commit()
             conn.close()
 
-# Terminar esto, no esta listo
+
 class Prestamo:
     def __init__(self,universitario,libro,dias):
         self._universitario = universitario
