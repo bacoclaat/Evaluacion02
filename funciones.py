@@ -144,7 +144,7 @@ def menu_universitario(usuario_logeado):
                             print("=== Resultados de la búsqueda ===")
                             for libro in libros_encontrados:
                                 id_libro, titulo, autor, cantidad = libro
-                                print(f"{id_libro}. {titulo} - {autor} | Copias disponibles: {cantidad}")
+                                print(f"ID: {id_libro}. {titulo} - {autor} | Copias disponibles: {cantidad}")
                         else:
                             print("No se encontraron libros con ese título.")
                 except ValueError:
@@ -350,7 +350,7 @@ def menu_bibliotecario(usuario_logeado):
                             for id_prestamo, nombre, titulo, fch_prestamo, fch_devolucion in prestamos:
                                 dias_restantes = (datetime.strptime(fch_devolucion, "%Y-%m-%d").date() - date.today()).days
                                 estado = "Atrasado" if dias_restantes < 0 else f"{dias_restantes} días restantes"
-                                print(f"{id_prestamo}. {titulo} - {nombre} | Desde: {fch_prestamo} Hasta: {fch_devolucion} | {estado}")
+                                print(f"ID: {id_prestamo}. {titulo} - {nombre} | Desde: {fch_prestamo} Hasta: {fch_devolucion} | {estado}")
                         else:
                             print("No hay préstamos registrados.")
                     elif sub_opcion == 2:
@@ -405,7 +405,7 @@ def menu_admin(usuario_logeado):
                         if usuarios:
                             print("=== Usuarios registrados ===")
                             for id_usuario, nombre, email, tipo in usuarios:
-                                print(f"{id_usuario}. {nombre} - {email} | Tipo: {tipo}")
+                                print(f"ID: {id_usuario}. {nombre} - {email} | Tipo: {tipo}")
                         else:
                             print("No hay usuarios registrados.")
 
