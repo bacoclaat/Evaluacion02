@@ -253,7 +253,6 @@ def menu_bibliotecario(usuario_logeado):
                             año = int(input("Año: "))
                             cantidad = int(input("Cantidad: "))
                             isbn = input("ISBN: ").strip()
-
                             libro = clases.Libro(titulo, autor, genero, año, cantidad, isbn)
                             libro.save()
                             print(f"Libro '{titulo}' agregado exitosamente.")
@@ -330,7 +329,9 @@ def menu_bibliotecario(usuario_logeado):
                 while True:
                     print("--- Gestión de Préstamos ---")
                     print("1. Ver todos los préstamos")
-                    print("2. Volver al menú principal")
+                    print("2. Modificar un préstamo")
+                    print("3. Eliminar un préstamo")
+                    print("4. Volver al menú principal")
                     sub_opcion = int(input("Seleccione una opción: "))
 
                     if sub_opcion == 1:
@@ -353,7 +354,59 @@ def menu_bibliotecario(usuario_logeado):
                                 print(f"ID: {id_prestamo}. {titulo} - {nombre} | Desde: {fch_prestamo} Hasta: {fch_devolucion} | {estado}")
                         else:
                             print("No hay préstamos registrados.")
+
                     elif sub_opcion == 2:
+                        id_prestamo = int(input("Ingrese el ID del préstamo a modificar: "))
+                        conn = sqlite3.connect("biblioteca.db")
+                        c = conn.cursor()
+                        c.execute("SELECT fch_prestamo, fch_devolucion FROM prestamos WHERE id = ?", (id_prestamo,))
+                        prestamo = c.fetchone()
+                        if not prestamo:
+                            print("Préstamo no encontrado.")
+                            conn.close()
+                            continue
+
+                        print(f"Fecha de préstamo actual: {prestamo[0]} | Devolución actual: {prestamo[1]}")
+                        try:
+                            dias_extra = int(input("Ingrese días adicionales para extender el préstamo: "))
+                            if dias_extra <= 0:
+                                print("Debe ingresar un número positivo.")
+                                conn.close()
+                                continue
+
+                            nueva_fecha_devolucion = datetime.strptime(prestamo[1], "%Y-%m-%d").date() + timedelta(days=dias_extra)
+                            c.execute("UPDATE prestamos SET fch_devolucion = ? WHERE id = ?", (nueva_fecha_devolucion, id_prestamo))
+                            conn.commit()
+                            print(f"Préstamo extendido hasta {nueva_fecha_devolucion}.")
+                        except ValueError:
+                            print("Entrada inválida. No se realizó el cambio.")
+                        conn.close()
+
+                    elif sub_opcion == 3:
+                        id_prestamo = int(input("Ingrese el ID del préstamo a eliminar: "))
+                        conn = sqlite3.connect("biblioteca.db")
+                        c = conn.cursor()
+                        c.execute("""
+                            SELECT prestamos.id, libros.id, libros.titulo 
+                            FROM prestamos 
+                            JOIN libros ON prestamos.libro_id = libros.id 
+                            WHERE prestamos.id = ?
+                        """, (id_prestamo,))
+                        fila = c.fetchone()
+                        if not fila:
+                            print("Préstamo no encontrado.")
+                            conn.close()
+                            continue
+                        _, id_libro, titulo_libro = fila
+                        confirm = input(f"¿Desea eliminar el préstamo del libro '{titulo_libro}'? (s/n): ").lower()
+                        if confirm == 's':
+                            c.execute("DELETE FROM prestamos WHERE id = ?", (id_prestamo,))
+                            c.execute("UPDATE libros SET cantidad = cantidad + 1 WHERE id = ?", (id_libro,))
+                            conn.commit()
+                            print("Préstamo eliminado y libro devuelto al inventario.")
+                        conn.close()
+
+                    elif sub_opcion == 4:
                         break
                     else:
                         print("Opción inválida.")
@@ -370,6 +423,7 @@ def menu_bibliotecario(usuario_logeado):
 
         except ValueError:
             print("Por favor, ingrese un número válido.")
+
 
 
 def menu_admin(usuario_logeado):
