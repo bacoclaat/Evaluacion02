@@ -1,0 +1,16 @@
+<!doctype html>
+<html>
+<body>
+  <h1>Libros</h1>
+  <a href="{% url 'logout' %}">Salir</a>
+  <ul>
+    {% for libro in libros %}
+      <li>{{ libro.titulo }} — {{ libro.autor }} ({{ libro.cantidad }} copias)
+        <a href="{% url 'prestar' libro.id %}">Prestar</a>
+      </li>
+    {% empty %}
+      <li>No hay libros</li>
+    {% endfor %}
+  </ul>
+</body>
+</html>

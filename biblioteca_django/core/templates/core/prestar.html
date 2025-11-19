@@ -1,0 +1,10 @@
+<!doctype html>
+<html>
+<body>
+  <h1>Prestar: {{ libro.titulo }}</h1>
+  <form method="post">{% csrf_token %}
+    <label>Días (1-14): <input name="dias" type="number" min="1" max="14" required></label>
+    <button type="submit">Solicitar préstamo</button>
+  </form>
+</body>
+</html>

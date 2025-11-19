@@ -1,0 +1,13 @@
+<!doctype html>
+<html>
+<body>
+  <h1>Préstamos</h1>
+  <ul>
+  {% for p in prestamos %}
+    <li>{{ p.libro.titulo }} — Desde {{ p.fch_prestamo }} Hasta {{ p.fch_devolucion }}</li>
+  {% empty %}
+    <li>No hay préstamos</li>
+  {% endfor %}
+  </ul>
+</body>
+</html>
