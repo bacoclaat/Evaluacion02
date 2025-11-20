@@ -34,7 +34,7 @@ def login_view(request):
         if user.tipo == "bibliotecario":
             return redirect("menu_bibliotecario")
         return redirect("menu_admin")
-    return render(request, "login.html")
+    return render(request, "core/login.html")
 
 def logout_view(request):
     request.session.flush()
