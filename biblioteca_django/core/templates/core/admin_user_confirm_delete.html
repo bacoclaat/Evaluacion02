@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Confirmar eliminación</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<div class="container py-5" style="max-width:600px;">
+  <div class="card p-4 shadow">
+    <h4>Eliminar usuario</h4>
+    <p>¿Seguro que deseas eliminar a <strong>{{ user.nombre }}</strong> ({{ user.email }})?</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <button type="submit" class="btn btn-danger">Sí, eliminar</button>
+      <button type="button" class="btn btn-secondary" onclick="history.back()">Cancelar</button>
+    </form>
+  </div>
+</div>
+</body>
+</html>
