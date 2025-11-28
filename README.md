@@ -40,3 +40,5 @@ python -m venv .venv
     .venv\scripts\activate
     DESACTIVAR
     desactivate
+
+Set-ExetucionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
