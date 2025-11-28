@@ -1,0 +1,22 @@
+{% extends 'core/base.html' %}
+{% block title %}Libros (bibliotecario){% endblock %}
+{% block content %}
+<h3>Libros</h3>
+<a href="{% url 'lib_add' %}" class="btn btn-success mb-3">Agregar libro</a>
+<table class="table">
+  <thead><tr><th>Título</th><th>Autor</th><th>Cantidad</th><th>Acciones</th></tr></thead>
+  <tbody>
+  {% for b in libros %}
+    <tr>
+      <td>{{ b.titulo }}</td><td>{{ b.autor }}</td><td>{{ b.cantidad }}</td>
+      <td>
+        <a class="btn btn-sm btn-primary" href="{% url 'lib_edit' b.id %}">Editar</a>
+        <form method="post" action="{% url 'lib_delete' b.id %}" style="display:inline">{% csrf_token %}
+          <button class="btn btn-sm btn-danger">Eliminar</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

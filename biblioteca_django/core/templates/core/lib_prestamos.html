@@ -1,0 +1,17 @@
+{% extends 'core/base.html' %}
+{% block title %}Préstamos (bibliotecario){% endblock %}
+{% block content %}
+<h3>Préstamos</h3>
+<table class="table">
+  <thead><tr><th>ID</th><th>Universitario</th><th>Libro</th><th>Desde</th><th>Hasta</th></tr></thead>
+  <tbody>
+    {% for p in prestamos %}
+    <tr>
+      <td>{{ p.id }}</td><td>{{ p.universitario }}</td><td>{{ p.titulo }}</td><td>{{ p.fch_prestamo }}</td><td>{{ p.fch_devolucion }}</td>
+    </tr>
+    {% empty %}
+    <tr><td colspan="5">No hay préstamos.</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

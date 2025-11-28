@@ -1,0 +1,24 @@
+{% extends 'core/base.html' %}
+{% block title %}Registro{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-8">
+    <div class="card p-4">
+      <h3>Registro</h3>
+      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+      <form method="post">{% csrf_token %}
+        <input class="form-control mb-2" name="nombre" placeholder="Nombre" required>
+        <input class="form-control mb-2" type="email" name="email" placeholder="Email" required>
+        <input class="form-control mb-2" type="password" name="password" placeholder="Contraseña" required>
+        <select class="form-select mb-2" name="tipo">
+          <option value="usuario">Usuario</option>
+          <option value="universitario">Universitario</option>
+          <option value="bibliotecario">Bibliotecario</option>
+        </select>
+        <input class="form-control mb-2" name="universidad" placeholder="Universidad (opcional)">
+        <button class="btn btn-success">Registrar</button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

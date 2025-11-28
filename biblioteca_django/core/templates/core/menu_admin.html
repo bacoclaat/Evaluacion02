@@ -1,0 +1,8 @@
+{% extends 'core/base.html' %}
+{% block title %}Admin{% endblock %}
+{% block content %}
+<h2>Panel Admin</h2>
+<div class="list-group">
+  <a class="list-group-item" href="{% url 'admin_usuarios' %}">Gestionar usuarios</a>
+</div>
+{% endblock %}

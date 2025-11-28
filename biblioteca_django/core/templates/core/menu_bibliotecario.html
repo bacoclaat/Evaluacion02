@@ -1,0 +1,9 @@
+{% extends 'core/base.html' %}
+{% block title %}Bibliotecario{% endblock %}
+{% block content %}
+<h2>Panel Bibliotecario</h2>
+<div class="list-group mb-3">
+  <a class="list-group-item" href="{% url 'lib_listar_libros' %}">Gestionar libros</a>
+  <a class="list-group-item" href="{% url 'lib_prestamos' %}">Ver préstamos</a>
+</div>
+{% endblock %}

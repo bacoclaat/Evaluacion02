@@ -1,0 +1,18 @@
+{% extends 'core/base.html' %}
+{% block title %}Login{% endblock %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card p-4">
+      <h3 class="mb-3">Iniciar sesión</h3>
+      {% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+      <form method="post">{% csrf_token %}
+        <input class="form-control mb-2" type="email" name="email" placeholder="Email" required>
+        <input class="form-control mb-2" type="password" name="password" placeholder="Contraseña" required>
+        <button class="btn btn-primary w-100">Entrar</button>
+      </form>
+      <a href="{% url 'registro' %}" class="d-block mt-3">Crear cuenta</a>
+    </div>
+  </div>
+</div>
+{% endblock %}

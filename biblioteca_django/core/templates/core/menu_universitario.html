@@ -1,0 +1,9 @@
+{% extends 'core/base.html' %}
+{% block title %}Universitario{% endblock %}
+{% block content %}
+<h2>Panel Universitario</h2>
+<div class="list-group mb-3">
+  <a class="list-group-item" href="{% url 'uni_libros' %}">Ver libros disponibles</a>
+  <a class="list-group-item" href="{% url 'uni_mis_prestamos' %}">Mis préstamos</a>
+</div>
+{% endblock %}

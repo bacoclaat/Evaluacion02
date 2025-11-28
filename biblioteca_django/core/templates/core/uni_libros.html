@@ -1,0 +1,24 @@
+{% extends 'core/base.html' %}
+{% block title %}Libros disponibles{% endblock %}
+{% block content %}
+<h3>Libros disponibles</h3>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<table class="table table-striped">
+  <thead><tr><th>Título</th><th>Autor</th><th>Copias</th><th>Acción</th></tr></thead>
+  <tbody>
+    {% for b in libros %}
+    <tr>
+      <td>{{ b.titulo }}</td><td>{{ b.autor }}</td><td>{{ b.cantidad }}</td>
+      <td>
+        <form method="post" action="{% url 'uni_pedir' %}" class="d-flex">
+          {% csrf_token %}
+          <input type="hidden" name="libro_id" value="{{ b.id }}">
+          <input type="number" name="dias" min="1" max="14" value="7" class="form-control me-2" style="width:100px">
+          <button class="btn btn-primary">Pedir</button>
+        </form>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

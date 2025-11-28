@@ -1,0 +1,12 @@
+{% extends 'core/base.html' %}
+{% block title %}Editar usuario{% endblock %}
+{% block content %}
+<h3>Editar usuario</h3>
+{% if error %}<div class="alert alert-danger">{{ error }}</div>{% endif %}
+<form method="post">{% csrf_token %}
+  <input class="form-control mb-2" name="nombre" value="{{ usuario.nombre }}" required>
+  <input class="form-control mb-2" name="email" value="{{ usuario.email }}" required>
+  <input class="form-control mb-2" name="password" placeholder="Nueva contraseña (opcional)">
+  <button class="btn btn-primary">Guardar</button>
+</form>
+{% endblock %}
