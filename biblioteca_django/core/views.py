@@ -73,9 +73,9 @@ def login_view(request):
         request.session["user_tipo"] = tipo
         request.session["user_nombre"] = nombre
 
-        # --- 👇 AQUI CAMBIA ---
+        # ---  AQUI CAMBIA ---
         if tipo == "admin":
-            return redirect("/admin/")   # << IR AL PANEL DJANGO ADMIN
+            return redirect("/django-admin/")   # << IR AL PANEL DJANGO ADMIN
         # -----------------------
 
         if tipo == "universitario":
