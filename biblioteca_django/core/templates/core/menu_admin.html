@@ -1,8 +1,15 @@
-{% extends 'core/base.html' %}
-{% block title %}Admin{% endblock %}
+{% extends "core/base.html" %}
+{% block title %}Panel Admin{% endblock %}
+
 {% block content %}
-<h2>Panel Admin</h2>
-<div class="list-group">
-  <a class="list-group-item" href="{% url 'admin_usuarios' %}">Gestionar usuarios</a>
+<div class="minimal-card">
+    <h2 class="mb-3">Panel de administrador</h2>
+    <p class="text-muted">Selecciona una opción:</p>
+
+    <div class="list-group">
+        <a href="{% url 'usuarios_list' %}" class="list-group-item list-group-item-action">👤 Gestionar usuarios</a>
+        <a href="{% url 'libros_list' %}" class="list-group-item list-group-item-action">📚 Ver libros</a>
+        <a href="{% url 'prestamos_list' %}" class="list-group-item list-group-item-action">📄 Ver préstamos</a>
+    </div>
 </div>
 {% endblock %}

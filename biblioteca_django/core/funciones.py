@@ -1,6 +1,6 @@
 import BD
 from datetime import datetime, timedelta, date # Importante, para saber cuando se tiene que devolver
-import clases 
+import biblioteca_django.core.clases as clases 
 import sqlite3
 import bcrypt
 BD.init_db()

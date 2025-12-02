@@ -1,0 +1,27 @@
+{% extends "core/base.html" %}
+{% block title %}Usuarios{% endblock %}
+
+{% block content %}
+<div class="minimal-card">
+    <h3 class="mb-3">Usuarios registrados</h3>
+
+    <table class="table table-hover align-middle">
+        <thead>
+            <tr>
+                <th>Nombre</th>
+                <th>Email</th>
+                <th>Tipo</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for u in usuarios %}
+            <tr>
+                <td>{{ u.nombre }}</td>
+                <td>{{ u.email }}</td>
+                <td>{{ u.tipo }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "core/base.html" %}
+{% block title %}Libro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="minimal-card">
+
+            <h3 class="mb-3">{{ title }}</h3>
+
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <button class="btn btn-success w-100 mt-3">Guardar</button>
+            </form>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

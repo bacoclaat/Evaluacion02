@@ -1,4 +1,4 @@
-import funciones
+import biblioteca_django.core.funciones as funciones
 
 
 print("Bienvenido a la biblioteca")

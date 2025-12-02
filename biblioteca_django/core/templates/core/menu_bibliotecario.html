@@ -1,9 +1,13 @@
-{% extends 'core/base.html' %}
-{% block title %}Bibliotecario{% endblock %}
+{% extends "core/base.html" %}
+{% block title %}Panel Bibliotecario{% endblock %}
+
 {% block content %}
-<h2>Panel Bibliotecario</h2>
-<div class="list-group mb-3">
-  <a class="list-group-item" href="{% url 'lib_listar_libros' %}">Gestionar libros</a>
-  <a class="list-group-item" href="{% url 'lib_prestamos' %}">Ver préstamos</a>
+<div class="minimal-card">
+    <h2 class="mb-3">Panel del bibliotecario</h2>
+
+    <div class="list-group">
+        <a href="{% url 'libros_list' %}" class="list-group-item list-group-item-action">📚 Gestionar libros</a>
+        <a href="{% url 'prestamos_list' %}" class="list-group-item list-group-item-action">📄 Ver préstamos</a>
+    </div>
 </div>
 {% endblock %}

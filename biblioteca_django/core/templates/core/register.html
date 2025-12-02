@@ -1,0 +1,53 @@
+{% extends "core/base.html" %}
+{% block title %}Registro{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-5">
+        <div class="minimal-card">
+
+            <h3 class="text-center mb-4">Crear cuenta</h3>
+
+            <form method="post">
+                {% csrf_token %}
+
+                <div class="mb-3">
+                    <label class="form-label">Nombre</label>
+                    <input name="nombre" type="text" class="form-control" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Email</label>
+                    <input name="email" type="email" class="form-control" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Contraseña</label>
+                    <input name="password" type="password" class="form-control" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Tipo de usuario</label>
+                    <select name="tipo" class="form-select" required>
+                        <option value="universitario">Universitario</option>
+                        <option value="bibliotecario">Bibliotecario</option>
+                        <option value="admin">Administrador</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Universidad (si aplica)</label>
+                    <input name="universidad" type="text" class="form-control">
+                </div>
+
+                <button class="btn btn-success w-100">Registrarme</button>
+            </form>
+
+            <div class="mt-3 text-center">
+                <a href="{% url 'login' %}">Volver al login</a>
+            </div>
+
+        </div>
+    </div>
+</div>
+{% endblock %}

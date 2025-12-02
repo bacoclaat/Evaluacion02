@@ -20,7 +20,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-)cqeyy+c&*yb^f)2$(per#l+108ogx!l*q7f(ydemr0taqlvjq'
+SECRET_KEY = 'django-insecure-j6^ndch4!j8^b1@5v3dgu5lug9$%4=x3=qu8ey08f7c9v2w3vc'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -76,7 +76,7 @@ WSGI_APPLICATION = 'biblioteca_django.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'NAME': BASE_DIR / 'biblioteca.db',
     }
 }
 
