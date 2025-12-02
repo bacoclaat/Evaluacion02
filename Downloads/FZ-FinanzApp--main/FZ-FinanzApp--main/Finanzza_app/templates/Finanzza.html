@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>FinanzApp - Gestor de Gastos Estudiantiles</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <style>
+        :root {
+            --bg: #f5f5f7;
+            --card-bg: rgba(255, 255, 255, 0.92);
+            --text: #1a1a1a;
+            --text-muted: #6c757d;
+            --border: rgba(0, 0, 0, 0.07);
+            --nav-bg: #0d6efd;
+            --shadow-soft: 0 18px 45px rgba(15, 23, 42, 0.12);
+        }
+
+        body.dark {
+            --bg: radial-gradient(circle at top, #1f2933 0, #050509 45%, #020204 100%);
+            --card-bg: rgba(20, 22, 30, 0.96);
+            --text: #f9fafb;
+            --text-muted: #c6c6c6;
+            --border: rgba(148, 163, 184, 0.35);
+            --nav-bg: rgba(10, 10, 14, 0.96);
+            --shadow-soft: 0 18px 45px rgba(0,0,0,0.75);
+        }
+
+        * {
+            transition:
+                background-color 0.25s ease,
+                color 0.25s ease,
+                border-color 0.25s ease,
+                box-shadow 0.25s ease,
+                transform 0.25s ease;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            opacity: 0;
+            transition: opacity .45s ease;
+        }
+        body.ready { opacity: 1; }
+
+        /* ==== TEXTO ==== */
+        body, h1, h2, h3, h4, h5, h6,
+        p, small, label, span, th, td, a, div {
+            color: var(--text);
+        }
+        .text-muted { color: var(--text-muted) !important; }
+
+        /* ==== NAVBAR ==== */
+        .navbar {
+            background-color: var(--nav-bg) !important;
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .logo-circle {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ffffff, #60a5fa);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0f172a;
+            font-weight: 700;
+        }
+
+        .mode-switch {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #fff;
+        }
+
+        /* ==== BOTÓN TUTORIAL ==== */
+        .tutorial-toggle {
+            border-radius: 999px;
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            background-color: rgba(255,255,255,0.9);
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            cursor: pointer;
+        }
+        body.dark .tutorial-toggle {
+            background-color: rgba(17,24,39,0.96);
+            border-color: rgba(148,163,184,0.7);
+            color: #e5e7eb;
+        }
+        body.tutorial-on .tutorial-toggle i {
+            color: #ffc107;
+        }
+
+        /* ==== BIENVENIDA ==== */
+        .welcome-box {
+            background: linear-gradient(135deg, rgba(56, 189, 248, 0.95), rgba(129, 140, 248, 0.97));
+            padding: 2rem;
+            border-radius: 1.25rem;
+            color: #fff;
+            box-shadow: var(--shadow-soft);
+        }
+
+        /* Texto tutorial dentro del banner */
+        .welcome-box .tutorial-hint {
+            color: rgba(255,255,255,0.95) !important;
+        }
+
+        /* Avatar grande en el banner */
+        .profile-avatar-lg {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            border: 3px solid #e5f2ff;
+            overflow: hidden;
+            flex-shrink: 0;
+            box-shadow: 0 0 0 3px rgba(15,23,42,0.18);
+        }
+        .profile-avatar-lg img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* ==== TARJETAS ==== */
+        .card.glass {
+            background: var(--card-bg);
+            border-radius: 1rem;
+            border: 1px solid var(--border);
+            backdrop-filter: blur(16px);
+            box-shadow: var(--shadow-soft);
+        }
+
+        /* ==== TABLAS ==== */
+        .table { color: var(--text); }
+        .table-light { background: rgba(248,249,250,0.95); }
+
+        body.dark .table thead,
+        body.dark .table-light {
+            background-color: #111827 !important;
+            color: #f9fafb !important;
+        }
+
+        body.dark .table thead th,
+        body.dark .table-light th,
+        body.dark thead.table-light th {
+            color: #f9fafb !important;
+            font-weight: 600 !important;
+        }
+
+        body.dark .table,
+        body.dark .table tbody,
+        body.dark .table td,
+        body.dark .table tr {
+            background-color: transparent !important;
+            color: #f9fafb !important;
+        }
+
+        body.dark .table > :not(caption) > * > * {
+            background-color: transparent !important;
+            box-shadow: none !important;
+        }
+
+        body.dark .table tbody tr:hover {
+            background-color: rgba(55,65,81,0.6);
+        }
+
+        .no-data-row td { font-style: italic; }
+        body.dark .no-data-row td {
+            background-color: #0f172a !important;
+            color: #e5e7eb !important;
+        }
+
+        /* ==== INPUTS ==== */
+        input.form-control,
+        select.form-select {
+            background-color: #fff;
+            color: #111827;
+        }
+        input.form-control::placeholder,
+        textarea.form-control::placeholder {
+            color: #6c757d;
+        }
+
+        body.dark input.form-control,
+        body.dark select.form-select {
+            background-color: #020617;
+            color: #f9fafb;
+            border-color: #4b5563;
+            color-scheme: dark;
+        }
+        body.dark input.form-control::placeholder,
+        body.dark textarea.form-control::placeholder {
+            color: #9ca3af;
+        }
+
+        /* (CSS de login overlay se mantiene pero ya no se usa) */
+        #loginOverlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at top, #1f2933 0, #020617 60%);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+        }
+        #loginCard {
+            width: 360px;
+            background: rgba(17,24,39,0.96);
+            border-radius: 1.25rem;
+            padding: 2rem;
+            border: 1px solid rgba(148,163,184,0.4);
+            box-shadow: 0 25px 60px rgba(0,0,0,0.85);
+        }
+
+        /* ==== ANIMACIONES ==== */
+        .animate-on-scroll {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        .animate-on-scroll.visible {
+            opacity: 1;
+            transform: translateY(0);
+            transition: all .45s ease;
+        }
+
+        /* ==== TUTORIAL ==== */
+        .tutorial-hint {
+            display: none;
+            font-size: .8rem;
+            color: var(--text-muted);
+            margin-bottom: .3rem;
+        }
+        body.tutorial-on .tutorial-hint {
+            display: block;
+        }
+
+        /* ==== MODAL PERFIL ==== */
+        .modal-content {
+            background-color: #020617;
+            color: #f9fafb;
+            border-radius: 1.25rem;
+            border: 1px solid rgba(148,163,184,0.4);
+        }
+        .modal-content .form-label,
+        .modal-content label,
+        .modal-content h5,
+        .modal-content h6,
+        .modal-content p,
+        .modal-content small {
+            color: #e5e7eb;
+        }
+        .modal-content input.form-control {
+            background-color: #020617;
+            color: #f9fafb;
+            border-color: #4b5563;
+        }
+        .modal-content input.form-control::placeholder {
+            color: #9ca3af;
+        }
+        .modal-content .btn-close {
+            filter: invert(1);
+        }
+    </style>
+</head>
+
+<body class="dark">
+
+<nav class="navbar px-3">
+    <div class="d-flex align-items-center gap-2">
+        <div class="logo-circle">FZ</div>
+        <span class="navbar-brand mb-0 text-light">FinanzApp</span>
+    </div>
+
+    <div class="d-flex align-items-center gap-3">
+        <button id="tutorialToggle" type="button" class="tutorial-toggle">
+            <i class="bi bi-question-circle-fill"></i>
+            <span class="d-none d-md-inline">Modo tutorial</span>
+        </button>
+
+                <button type="button"
+                class="btn btn-outline-light btn-sm d-flex align-items-center gap-1"
+                data-bs-toggle="modal" data-bs-target="#profileModal">
+            <i class="bi bi-person-circle"></i>
+            <span class="d-none d-md-inline">Editar perfil</span>
+        </button>
+
+                <span id="navbarUser" class="text-light small">
+            {{ usuario }}
+        </span>
+
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-light btn-sm">
+            <i class="bi bi-box-arrow-right me-1"></i> Cerrar sesión
+        </a>
+
+        <span id="themeToggle" class="mode-switch"><i class="bi bi-moon-stars-fill"></i></span>
+    </div>
+</nav>
+
+
+<main class="container py-4">
+
+        <section class="animate-on-scroll mb-4">
+        <div class="welcome-box">
+            <div class="d-flex align-items-center gap-3">
+                                <div class="profile-avatar-lg d-none d-sm-block">
+                    <img id="welcomeAvatar" alt="Avatar de {{ usuario }}">
+                </div>
+
+                <div>
+                    <h2 id="welcomeTitle">Bienvenido, {{ usuario }}</h2>
+                    <p>Administra tus ingresos, gastos y proyección de ahorro como estudiante.</p>
+                    <p class="tutorial-hint">
+                        Este mensaje te da la bienvenida y te recuerda que esta app guarda todo localmente en tu navegador.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+        <section class="animate-on-scroll mb-4">
+        <h4 class="mb-1">Tu resumen financiero</h4>
+        <p class="tutorial-hint">Aquí ves un resumen rápido de todo: cuánto has ganado, cuánto has gastado y cómo vas este mes.</p>
+
+        <div class="row g-3">
+            <div class="col-md-3"><div class="card glass p-3">
+                <p class="text-muted">Total ingresos</p>
+                <h4 id="totalIngresos" class="text-success">$0</h4>
+                <p class="tutorial-hint">Suma de todo el dinero que ha entrado (becas, trabajos, ayudas, etc.).</p>
+            </div></div>
+
+            <div class="col-md-3"><div class="card glass p-3">
+                <p class="text-muted">Total gastos</p>
+                <h4 id="totalGastos" class="text-danger">$0</h4>
+                <p class="tutorial-hint">Suma de todos los gastos que has registrado.</p>
+            </div></div>
+
+            <div class="col-md-3"><div class="card glass p-3">
+                <p class="text-muted">Saldo actual</p>
+                <h4 id="saldoActual" class="text-primary">$0</h4>
+                <p class="tutorial-hint">Ingresos menos gastos. Si es negativo, estás gastando más de lo que entra.</p>
+            </div></div>
+
+            <div class="col-md-3"><div class="card glass p-3">
+                <p class="text-muted">Mes actual</p>
+                <h4 id="totalMensual" class="text-info">$0</h4>
+                <p class="tutorial-hint">Resultado solo del mes actual, útil para ver cómo vas este mes.</p>
+            </div></div>
+        </div>
+    </section>
+
+        <section class="animate-on-scroll my-4">
+        <div class="row g-3">
+
+                        <div class="col-lg-7">
+                <div class="card glass p-3">
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <h5 class="mb-0">Tus movimientos</h5>
+                        <span class="badge bg-secondary">
+                            Registros: <span id="cantidadMovimientos">0</span>
+                        </span>
+                    </div>
+                    <p class="tutorial-hint">Aquí aparecen todos los ingresos y gastos que agregas, ordenados por fecha.</p>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-2">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>Descripción</th>
+                                    <th>Tipo</th>
+                                    <th>Categoría</th>
+                                    <th class="text-end">Monto</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                                                        <tbody id="lista-movimientos"></tbody>
+                        </table>
+                    </div>
+
+                    <p class="text-muted small mb-0">Se guarda automáticamente en tu servidor Flask/SQLite.</p>
+                </div>
+            </div>
+
+                        <div class="col-lg-5">
+                <div class="card glass p-3">
+                    <h5>Agregar movimiento</h5>
+                    <p class="tutorial-hint">Usa este formulario para registrar cada ingreso o gasto (como Junaeb, transporte, colación, etc.).</p>
+
+                                        <form id="form-movimiento">
+                        <label class="mt-2">Fecha</label>
+                        <input id="fecha" name="fecha" type="date" class="form-control" required>
+
+                        <label class="mt-2">Descripción</label>
+                        <input id="descripcion" name="descripcion" class="form-control" placeholder="Ej: Beca Junaeb, colación" required>
+
+                        <label class="mt-2">Tipo</label>
+                        <select id="tipo" name="tipo" class="form-select" required>
+                            <option disabled selected>Selecciona</option>
+                            <option>Ingreso</option>
+                            <option>Gasto</option>
+                        </select>
+
+                        <label class="mt-2">Categoría</label>
+                        <select id="categoria" name="categoria" class="form-select" required>
+                            <option disabled selected>Selecciona</option>
+                            <option>Alimentación</option>
+                            <option>Transporte</option>
+                            <option>Materiales</option>
+                            <option>Ocio</option>
+                            <option>Salud</option>
+                            <option>Vivienda</option>
+                            <option>Otros</option>
+                        </select>
+
+                        <label class="mt-2">Monto</label>
+                        <input id="monto" name="monto" type="number" class="form-control" required>
+
+                        <button class="btn btn-primary w-100 mt-3">
+                            <i class="bi bi-plus-circle me-1"></i> Guardar
+                        </button>
+                    </form>
+
+                    <button id="btnLimpiar" class="btn btn-outline-danger w-100 mt-3">Borrar todo</button>
+                    <p class="tutorial-hint mt-2">“Borrar todo” elimina todos los registros guardados (se recomienda usarlo solo para reiniciar la app).</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+        <section class="animate-on-scroll my-4">
+        <div class="row g-3">
+
+            <div class="col-lg-6">
+                <div class="card glass p-3">
+                    <h5>Distribución de tu dinero</h5>
+                    <p class="tutorial-hint">Muestra cuánto corresponde a ingresos, gastos, saldo actual y resultado del mes.</p>
+                    <canvas id="chartCategorias"></canvas>
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="card glass p-3">
+                    <h5>Evolución del saldo</h5>
+                    <p class="tutorial-hint">Gráfico de línea con el saldo acumulado según la fecha de tus movimientos.</p>
+                    <canvas id="chartSaldo"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+        <section class="animate-on-scroll my-4">
+        <h4 class="mb-1">Proyección de ahorro</h4>
+        <p class="tutorial-hint">Simula cuánto juntarías si ahorras un monto fijo todos los meses. Es una sucesión aritmética aplicada al ahorro.</p>
+
+        <div class="row g-3">
+
+            <div class="col-lg-5">
+                <div class="card glass p-3">
+                    <h5>Simula cuánto puedes ahorrar</h5>
+
+                    <form id="formProyeccion">
+                        <label class="mt-2">Saldo actual ($)</label>
+                        <input id="saldoInicial" type="number" class="form-control" value="0">
+
+                        <label class="mt-2">Ahorro mensual ($)</label>
+                        <input id="aporteMensual" type="number" class="form-control" value="20000">
+
+                        <label class="mt-2">Meses</label>
+                        <input id="nMeses" type="number" class="form-control" value="6">
+
+                        <button class="btn btn-success w-100 mt-3">
+                            <i class="bi bi-calculator me-1"></i> Calcular
+                        </button>
+                    </form>
+                    <p class="mt-3 small text-muted">Ahorro total estimado:</p>
+                    <h4 id="resultadoProyeccion" class="text-success">$0</h4>
+                    <p class="tutorial-hint">Este número es cuánto dinero tendrías al final del período, sumando saldo inicial + todos los aportes mensuales.</p>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="card glass p-3">
+                    <h5>Ahorro mes a mes</h5>
+                    <p class="tutorial-hint">Aquí ves cómo crece tu ahorro cada mes. Cada punto del gráfico representa un mes.</p>
+                    <canvas id="chartProyeccion"></canvas>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+        <section class="animate-on-scroll my-4">
+        <h4 class="mb-1">Metas de ahorro</h4>
+        <p class="tutorial-hint">Aquí puedes crear metas personales y registrar tu progreso.</p>
+
+        <div class="row g-3">
+
+                        <div class="col-lg-5">
+                <div class="card glass p-3">
+                    <h5>Crear nueva meta</h5>
+
+                                        <form id="form-meta">
+                        <label class="mt-2">Nombre de la meta</label>
+                        <input id="metaNombre" name="nombre" class="form-control" placeholder="Ej: Notebook, Viaje, Celular" required>
+
+                        <label class="mt-2">Monto objetivo ($)</label>
+                        <input id="metaObjetivo" name="objetivo" type="number" class="form-control" required>
+
+                        <label class="mt-2">Monto ahorrado ($)</label>
+                        <input id="metaActual" name="actual" type="number" class="form-control" value="0" required>
+
+                        <button class="btn btn-primary w-100 mt-3">
+                            <i class="bi bi-flag me-1"></i> Crear meta
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+                        <div class="col-lg-7">
+                <div class="card glass p-3">
+                    <h5>Tus metas</h5>
+                    <p class="tutorial-hint">Lleva el registro visual de tu progreso.</p>
+
+                    <div class="table-responsive">
+                        <table class="table table-sm align-middle mb-2">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Meta</th>
+                                    <th>Progreso</th>
+                                    <th class="text-end">Acciones</th>
+                                </tr>
+                            </thead>
+                                                        <tbody id="lista-metas"></tbody>
+                        </table>
+                    </div>
+
+                    <p class="text-muted small mb-0">Las metas se guardan en tu servidor Flask/SQLite.</p>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+</main>
+
+<div class="modal fade" id="profileModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0">
+        <h5 class="modal-title">
+            <i class="bi bi-person-circle me-2"></i>Editar Perfil
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+        </div>
+      <div class="modal-body pt-0">
+        <div class="d-flex flex-column align-items-center mb-3">
+           <div class="profile-avatar-lg mb-2">
+              <img id="profileAvatar" alt="Foto de perfil">
+           </div>
+           <small class="text-muted">La foto se guarda solo en este navegador.</small>
+        </div>
+
+        <div class="mb-3">
+          <label class="form-label">Cambiar foto</label>
+          <input type="file" class="form-control" id="profilePhotoInput" accept="image/*">
+        </div>
+
+        <div class="mb-3">
+           <label class="form-label">Nombre</label>
+           <input type="text" class="form-control" id="profileName" value="{{ usuario }}">
+        </div>
+
+        <div class="mb-3">
+           <label class="form-label">Correo</label>
+           <input type="email" class="form-control" id="profileEmail"
+                  placeholder="Tu correo (vendrá de SQLite después)" disabled>
+        </div>
+
+        <div class="mb-2">
+           <label class="form-label">Nueva contraseña</label>
+           <input type="password" class="form-control" id="profilePassword"
+                  placeholder="••••••••" disabled>
+        </div>
+        <small class="text-muted d-block">
+            Por ahora estos datos sensibles se modifican desde el backend. Esta pantalla es solo visual.
+        </small>
+      </div>
+      <div class="modal-footer border-0">
+         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+         <button type="button" class="btn btn-primary" id="profileSaveBtn">Guardar cambios</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="text-center py-3 text-muted">
+    FinanzApp · Datos almacenados en Flask/SQLite · 2025
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+// Array global para almacenar los datos cargados desde la API
+let movimientos = [];
+let metas = [];
+
+// Totales que usa la gráfica de torta
+let resumenTotales = {
+    ingresos: 0,
+    gastos: 0,
+    saldo: 0,
+    mensual: 0
+};
+
+let chartCategorias = null;
+let chartSaldo = null;
+let chartProyeccion = null;
+
+// CONSTANTES DE LOCALSTORAGE (solo para tema y perfil, ya no para movimientos/metas)
+const STORAGE_AVATAR = "finanzapp-avatar";
+const STORAGE_DISPLAY_NAME = "finanzapp-display-name";
+
+/* UTILIDADES */
+function formatearMonto(n) { return n.toLocaleString("es-CL"); }
+
+function obtenerMesActual() {
+    const d = new Date();
+    return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+}
+
+/* ==== TEMA ==== */
+const themeToggle = document.getElementById("themeToggle");
+function aplicarTema() {
+    const mode = localStorage.getItem("finanzapp-theme") || "light";
+    document.body.classList.toggle("dark", mode === "dark");
+    themeToggle.innerHTML = mode === "dark"
+        ? '<i class="bi bi-brightness-high-fill"></i>'
+        : '<i class="bi bi-moon-stars-fill"></i>';
+}
+themeToggle.onclick = () => {
+    const mode = localStorage.getItem("finanzapp-theme") || "light";
+    const nuevo = mode === "dark" ? "light" : "dark";
+    localStorage.setItem("finanzapp-theme", nuevo);
+    aplicarTema();
+};
+
+/* ==== TUTORIAL ==== */
+const tutorialToggle = document.getElementById("tutorialToggle");
+function aplicarTutorial() {
+    document.body.classList.toggle(
+        "tutorial-on",
+        localStorage.getItem("finanzapp-tutorial") === "on"
+    );
+}
+tutorialToggle.onclick = () => {
+    const on = localStorage.getItem("finanzapp-tutorial") === "on";
+    localStorage.setItem("finanzapp-tutorial", on ? "off" : "on");
+    aplicarTutorial();
+};
+
+/* ==== TABLA MOVIMIENTOS: PINTAR EN EL DOM ==== */
+function actualizarTabla() {
+    const tbody = document.getElementById("lista-movimientos"); // USANDO EL NUEVO ID
+    tbody.innerHTML = "";
+
+    if (movimientos.length === 0) {
+        tbody.innerHTML = `
+            <tr class="no-data-row">
+                <td colspan="6" class="text-center py-3">
+                    Aún no has registrado movimientos.
+                </td>
+            </tr>`;
+        document.getElementById("cantidadMovimientos").textContent = "0";
+        return;
+    }
+
+    // Ordenar por fecha (más reciente primero)
+    movimientos.sort((a,b) => b.fecha.localeCompare(a.fecha));
+
+    movimientos.forEach(m => {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+            <td>${m.fecha.split("-").reverse().join("-")}</td>
+            <td>${m.descripcion}</td>
+            <td>${m.tipo === "Ingreso"
+                ? '<span class="badge bg-success">Ingreso</span>'
+                : '<span class="badge bg-danger">Gasto</span>'}</td>
+            <td>${m.categoria}</td>
+            <td class="text-end">$${formatearMonto(m.monto)}</td>
+            <td>
+                <button class="btn btn-sm btn-danger p-1" onclick="eliminarMovimiento(${m.id})">
+                    <i class="bi bi-trash small"></i>
+                </button>
+            </td>`;
+        tbody.appendChild(fila);
+    });
+
+    document.getElementById("cantidadMovimientos").textContent = movimientos.length;
+}
+
+/* ==== SUMATORIAS ==== */
+function actualizarSumatorias() {
+    let ingresos = 0;
+    let gastos   = 0;
+    let mensual  = 0;
+    const actual = obtenerMesActual(); // yyyy-mm
+
+    // NOTA: Usamos el array 'movimientos' que ahora se llena con la API
+    movimientos.forEach(m => {
+        if (m.tipo === "Ingreso") {
+            ingresos += m.monto;
+            if (m.fecha.startsWith(actual)) mensual += m.monto;
+        } else {
+            gastos += m.monto;
+            if (m.fecha.startsWith(actual)) mensual -= m.monto;
+        }
+    });
+
+    const saldo = ingresos - gastos;
+
+    document.getElementById("totalIngresos").textContent = "$" + formatearMonto(ingresos);
+    document.getElementById("totalGastos").textContent   = "$" + formatearMonto(gastos);
+    document.getElementById("totalMensual").textContent  = "$" + formatearMonto(mensual);
+    document.getElementById("saldoActual").textContent   = "$" + formatearMonto(saldo);
+
+    // Guardar totales para la gráfica de torta
+    resumenTotales = { ingresos, gastos, saldo, mensual };
+}
+
+/* ==== METAS DE AHORRO: PINTAR EN EL DOM ==== */
+function actualizarTablaMetas() {
+    const tbody = document.getElementById("lista-metas"); // USANDO EL NUEVO ID
+    tbody.innerHTML = "";
+
+    if (metas.length === 0) {
+        tbody.innerHTML = `
+            <tr class="no-data-row">
+                <td colspan="3" class="text-center py-3">Aún no has registrado metas.</td>
+            </tr>`;
+        return;
+    }
+
+    // NOTA: 'metas' ahora se llena con los datos de la API
+    metas.forEach(m => {
+        const porcentaje = m.objetivo > 0
+            ? Math.min(100, Math.round((m.actual / m.objetivo) * 100))
+            : 0;
+
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+            <td>${m.nombre}<br>
+                <small class="text-muted">$${m.actual.toLocaleString("es-CL")} / $${m.objetivo.toLocaleString("es-CL")}</small>
+            </td>
+
+            <td style="width: 45%;">
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar bg-info" role="progressbar"
+                        style="width: ${porcentaje}%"></div>
+                </div>
+                <small>${porcentaje}%</small>
+            </td>
+
+            <td class="text-end">
+                <button class="btn btn-sm btn-success me-1" onclick="agregarAhorro(${m.id})">
+                    <i class="bi bi-plus-circle"></i>
+                </button>
+                <button class="btn btn-sm btn-danger" onclick="eliminarMeta(${m.id})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </td>
+        `;
+
+        tbody.appendChild(fila);
+    });
+}
+
+// NOTA: estas funciones (eliminarMeta, agregarAhorro) deben ser adaptadas para usar la API
+// Dejo los nombres iguales, pero la lógica interna debe ser de API (PUT/DELETE)
+function agregarAhorro(metaId) {
+    alert(`Implementar API PUT para actualizar el monto de la meta ${metaId}`);
+}
+function eliminarMeta(metaId) {
+    alert(`Implementar API DELETE para eliminar la meta ${metaId}`);
+}
+
+/* ==== GRÁFICO TORTA (USANDO TOTALES) ==== */
+function actualizarGraficoCategorias() {
+    const ctx = document.getElementById("chartCategorias");
+    if (chartCategorias) chartCategorias.destroy();
+
+    const { ingresos, gastos, saldo, mensual } = resumenTotales;
+
+    const labels = [];
+    const data   = [];
+    const colors = [];
+
+    if (ingresos !== 0) {
+        labels.push("Ingresos totales");
+        data.push(ingresos);
+        colors.push("#22c55e"); // verde
+    }
+
+    if (gastos !== 0) {
+        labels.push("Gastos totales");
+        data.push(gastos);
+        colors.push("#ef4444"); // rojo
+    }
+
+    if (saldo !== 0) {
+        labels.push(saldo > 0 ? "Saldo actual" : "Deuda actual");
+        data.push(Math.abs(saldo));
+        colors.push(saldo > 0 ? "#0ea5e9" : "#f97316"); // azul / naranjo
+    }
+
+    if (mensual !== 0) {
+        labels.push("Resultado mes actual");
+        data.push(Math.abs(mensual));
+        colors.push(mensual >= 0 ? "#a855f7" : "#facc15"); // morado / amarillo
+    }
+
+    if (labels.length === 0) {
+        chartCategorias = new Chart(ctx, {
+            type: "doughnut",
+            data: {
+                labels: ["Sin datos"],
+                datasets: [{ data: [1] }]
+            },
+            options: {
+                plugins: { legend: { position: "bottom" } }
+            }
+        });
+        return;
+    }
+
+    chartCategorias = new Chart(ctx, {
+        type: "doughnut",
+        data: {
+            labels,
+            datasets: [{
+                data,
+                backgroundColor: colors,
+                borderWidth: 2
+            }]
+        },
+        options: {
+            plugins: {
+                legend: { position: "bottom" }
+            }
+        }
+    });
+}
+
+/* ==== GRÁFICO SALDO ==== */
+function actualizarGraficoSaldo() {
+    const ctx = document.getElementById("chartSaldo");
+    if (chartSaldo) chartSaldo.destroy();
+
+    if (movimientos.length === 0) {
+        chartSaldo = new Chart(ctx, {
+            type: "line",
+            data: { labels: ["Sin datos"], datasets: [{ data: [0] }] }
+        });
+        return;
+    }
+
+    let saldo = 0;
+    const labels = [];
+    const data = [];
+
+    // Ordenar por fecha, ascendente, para calcular el saldo acumulado
+    const movimientosOrdenados = [...movimientos].sort((a,b) => a.fecha.localeCompare(b.fecha));
+
+    movimientosOrdenados.forEach(m => {
+        saldo += (m.tipo === "Ingreso" ? m.monto : -m.monto);
+        labels.push(m.fecha.split("-").reverse().join("-"));
+        data.push(saldo);
+    });
+
+    chartSaldo = new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets:[{ label:"Saldo acumulado", data, borderWidth:2, fill:true }] }
+    });
+}
+
+/* ==== GRÁFICO PROYECCIÓN ==== */
+function actualizarGraficoProyeccion(labels, data) {
+    const ctx = document.getElementById("chartProyeccion");
+    if (chartProyeccion) chartProyeccion.destroy();
+
+    chartProyeccion = new Chart(ctx, {
+        type: "line",
+        data: { labels, datasets: [{ label:"Ahorro acumulado", data, borderWidth:2, fill:true }] }
+    });
+}
+
+/* ==== EVENTOS PROYECCIÓN ==== */
+document.getElementById("formProyeccion").addEventListener("submit", e => {
+    e.preventDefault();
+
+    let saldoInicial = parseFloat(document.getElementById("saldoInicial").value);
+    let aporteMensual = parseFloat(document.getElementById("aporteMensual").value);
+    let meses = parseInt(document.getElementById("nMeses").value);
+
+    let acumulado = saldoInicial;
+    const labels = [];
+    const data = [];
+
+    for (let i = 1; i <= meses; i++) {
+        acumulado += aporteMensual;
+        labels.push("Mes " + i);
+        data.push(acumulado);
+    }
+
+    document.getElementById("resultadoProyeccion").textContent =
+        "$" + formatearMonto(acumulado);
+
+    actualizarGraficoProyeccion(labels, data);
+});
+
+/* ==== PERFIL: AVATAR + NOMBRE ==== */
+function setAvatarSrc(url) {
+    const welcomeAvatar = document.getElementById("welcomeAvatar");
+    const profileAvatar = document.getElementById("profileAvatar");
+    if (welcomeAvatar) welcomeAvatar.src = url;
+    if (profileAvatar) profileAvatar.src = url;
+}
+
+/* ==== INICIO (DOM READY) ==== */
+document.addEventListener("DOMContentLoaded", () => {
+    document.body.classList.add("ready");
+
+    aplicarTema();
+    aplicarTutorial();
+
+    document.getElementById("fecha").value = new Date().toISOString().split("T")[0];
+
+    // Cargar datos de la API
+    cargarMovimientos();
+    cargarMetas();
+
+    const obs = new IntersectionObserver(entries => {
+        entries.forEach(e => {
+            if (e.isIntersecting) e.target.classList.add("visible");
+        });
+    });
+
+    document.querySelectorAll(".animate-on-scroll").forEach(el => obs.observe(el));
+
+    // ----- Perfil: nombre mostrado -----
+    const navbarUser = document.getElementById("navbarUser");
+    const welcomeTitle = document.getElementById("welcomeTitle");
+    const profileNameInput = document.getElementById("profileName");
+
+    let nombreBase = "{{ usuario }}";
+    const nombreGuardado = localStorage.getItem(STORAGE_DISPLAY_NAME);
+    const nombreFinal = nombreGuardado || nombreBase;
+
+    if (navbarUser) navbarUser.textContent = nombreFinal;
+    if (welcomeTitle) welcomeTitle.textContent = "Bienvenido, " + nombreFinal;
+    if (profileNameInput) profileNameInput.value = nombreFinal;
+
+    // ----- Perfil: avatar -----
+    const defaultAvatarUrl =
+        "https://ui-avatars.com/api/?name=" +
+        encodeURIComponent(nombreFinal) +
+        "&background=0ea5e9&color=ffffff&size=128";
+
+    const avatarGuardado = localStorage.getItem(STORAGE_AVATAR);
+    setAvatarSrc(avatarGuardado || defaultAvatarUrl);
+
+    const photoInput = document.getElementById("profilePhotoInput");
+    if (photoInput) {
+        photoInput.addEventListener("change", e => {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = evt => {
+                const dataUrl = evt.target.result;
+                localStorage.setItem(STORAGE_AVATAR, dataUrl);
+                setAvatarSrc(dataUrl);
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    // Guardar cambios de nombre (solo front/localStorage)
+    const saveBtn = document.getElementById("profileSaveBtn");
+    if (saveBtn && profileNameInput) {
+        saveBtn.addEventListener("click", () => {
+            const nuevoNombre = profileNameInput.value.trim() || nombreBase;
+            localStorage.setItem(STORAGE_DISPLAY_NAME, nuevoNombre);
+
+            if (navbarUser) navbarUser.textContent = nuevoNombre;
+            if (welcomeTitle) welcomeTitle.textContent = "Bienvenido, " + nuevoNombre;
+
+            // Si no hay foto personalizada, actualizar avatar de iniciales
+            const avatarCustom = localStorage.getItem(STORAGE_AVATAR);
+            if (!avatarCustom) {
+                const url =
+                    "https://ui-avatars.com/api/?name=" +
+                    encodeURIComponent(nuevoNombre) +
+                    "&background=0ea5e9&color=ffffff&size=128";
+                setAvatarSrc(url);
+            }
+
+            const modalEl = document.getElementById("profileModal");
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if (modal) modal.hide();
+        });
+    }
+});
+
+document.getElementById("btnLimpiar").onclick = () => {
+    alert("La funcionalidad 'Borrar todo' debe ser implementada en el backend.");
+};
+
+</script>
+
+<script>
+// ---------- MOVIMIENTOS: Lógica de Carga, Creación y Eliminación (API) ----------
+async function cargarMovimientos() {
+  const res = await fetch("/api/movimientos");
+  if (!res.ok) {
+        movimientos = [];
+        return;
+    }
+  const data = await res.json();
+  movimientos = data; // Almacenar los datos de la API en el array global
+  
+  // Actualizar el frontend con los datos cargados
+  actualizarTabla();
+  actualizarSumatorias();
+  actualizarGraficoCategorias();
+  actualizarGraficoSaldo();
+}
+
+async function eliminarMovimiento(id) {
+  if (!confirm("¿Seguro que deseas eliminar este movimiento?")) return;
+  const res = await fetch(`/api/movimientos/${id}`, { method: "DELETE" });
+  if (res.ok) cargarMovimientos(); // Recargar la lista y actualizar todo el frontend
+}
+
+async function crearMovimiento(e) {
+  e.preventDefault();
+  const form = e.target;
+  const movimiento = {
+    fecha: form.fecha.value,
+    descripcion: form.descripcion.value,
+    tipo: form.tipo.value,
+    categoria: form.categoria.value,
+    monto: parseFloat(form.monto.value)
+  };
+  
+  if (Object.values(movimiento).some(v => v === "" || isNaN(v))) {
+      alert("Completa todos los campos del movimiento.");
+      return;
+  }
+
+  const res = await fetch("/api/movimientos", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(movimiento)
+  });
+  if (res.ok) {
+    form.reset();
+    cargarMovimientos(); // Recargar la lista y actualizar todo el frontend
+  } else {
+    alert("Error al guardar el movimiento en el backend.");
+  }
+}
+
+const formMov = document.getElementById("form-movimiento");
+if (formMov) formMov.addEventListener("submit", crearMovimiento);
+
+
+// ---------- METAS: Lógica de Carga y Creación (API) ----------
+async function cargarMetas() {
+  const res = await fetch("/api/metas");
+  if (!res.ok) {
+        metas = [];
+        return;
+    }
+  const data = await res.json();
+  metas = data; // Almacenar los datos de la API en el array global
+  
+  // Actualizar el frontend con los datos cargados
+  actualizarTablaMetas();
+}
+
+async function crearMeta(e) {
+  e.preventDefault();
+  const form = e.target;
+  const meta = {
+    nombre: form.nombre.value,
+    objetivo: parseFloat(form.objetivo.value),
+    actual: parseFloat(form.actual.value || 0)
+  };
+  
+  if (Object.values(meta).some(v => v === "" || isNaN(v))) {
+      alert("Completa todos los campos de la meta.");
+      return;
+  }
+
+  const res = await fetch("/api/metas", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(meta)
+  });
+  if (res.ok) {
+    form.reset();
+    cargarMetas(); // Recargar la lista
+  } else {
+    alert("Error al guardar la meta en el backend.");
+  }
+}
+
+const formMeta = document.getElementById("form-meta");
+if (formMeta) formMeta.addEventListener("submit", crearMeta);
+
+</script>
+</body>
+</html>

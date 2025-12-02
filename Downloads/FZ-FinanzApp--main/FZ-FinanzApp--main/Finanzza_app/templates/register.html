@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>FinanzApp - Registrarse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <!-- Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Iconos -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: radial-gradient(circle at top, #1f2933 0, #050509 45%, #020204 100%);
+            color: #ffffff;
+            font-family: 'Segoe UI', sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0 1rem;
+        }
+
+        .login-card {
+            width: 400px;
+            background: rgba(20, 22, 30, 0.96);
+            padding: 2rem;
+            border-radius: 1.25rem;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(148,163,184,0.35);
+            color: #ffffff;
+        }
+
+        .logo-circle {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 30% 30%, #ffffff, #60a5fa);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0f172a;
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        input.form-control {
+            background: #020617;
+            color: #ffffff;
+            border-color: #4b5563;
+        }
+
+        input.form-control::placeholder {
+            color: #9ca3af;
+        }
+
+        input.form-control:focus {
+            background: #0b0f1a;
+            border-color: #60a5fa;
+            color: #ffffff;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            border: none;
+        }
+
+        .btn-primary:hover {
+            opacity: .95;
+        }
+
+        a {
+            color: #60a5fa;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+
+        label {
+            color: #ffffff;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-card">
+
+    <div class="d-flex align-items-center gap-3 mb-4">
+        <div class="logo-circle">FZ</div>
+        <h3 class="text-light m-0">FinanzApp</h3>
+    </div>
+
+    <h4 class="mb-3">Crear cuenta</h4>
+
+    <form method="POST" action="/register">
+        <label>Nombre</label>
+        <input type="text" name="nombre" class="form-control mb-3"
+               placeholder="Ej: Elias" required>
+
+        <label>Correo</label>
+        <input type="email" name="email" class="form-control mb-3"
+               placeholder="usuario@correo.com" required>
+
+        <label>Contraseña</label>
+        <input type="password" name="password" class="form-control mb-3"
+               placeholder="••••••••" required>
+
+        <label>Confirmar contraseña</label>
+        <input type="password" name="confirm_password" class="form-control mb-4"
+               placeholder="Repite la contraseña" required>
+
+        <button class="btn btn-primary w-100">
+            Registrarse
+        </button>
+    </form>
+
+    <div class="text-center mt-3">
+        <small>¿Ya tienes cuenta?
+            <a href="/login">Iniciar sesión</a>
+        </small>
+    </div>
+
+</div>
+
+</body>
+</html>
