@@ -8,10 +8,9 @@ urlpatterns = [
     path("logout/", views.logout_view, name="logout"),
     path("registro/", views.register_view, name="register"),
 
-    # menus
+    # menus normales
     path("uni/menu/", views.uni_menu, name="uni_menu"),
     path("biblio/menu/", views.biblio_menu, name="biblio_menu"),
-    path("admin/menu/", views.admin_menu, name="admin_menu"),   # ← VOLVIÓ
 
     # libros
     path("libros/", views.libros_lista, name="libros_lista"),

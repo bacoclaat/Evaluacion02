@@ -73,10 +73,14 @@ def login_view(request):
         request.session["user_tipo"] = tipo
         request.session["user_nombre"] = nombre
 
+        # --- 👇 AQUI CAMBIA ---
         if tipo == "admin":
-            return redirect("admin_menu")
+            return redirect("/admin/")   # << IR AL PANEL DJANGO ADMIN
+        # -----------------------
+
         if tipo == "universitario":
             return redirect("uni_menu")
+
         if tipo == "bibliotecario":
             return redirect("biblio_menu")
 
@@ -105,7 +109,7 @@ def register_view(request):
         tipo = request.POST.get("tipo", "universitario").strip()
         universidad = request.POST.get("universidad", "").strip()
 
-        # Seguridad: impedir admins
+        # Seguridad: impedir admins creados por formulario
         if tipo == "admin":
             tipo = "universitario"
 
@@ -130,6 +134,7 @@ def register_view(request):
 
     return render(request, "core/register.html")
 
+
 # --------------------------------
 # MENÚS
 # --------------------------------
@@ -141,11 +146,7 @@ def uni_menu(request):
 def biblio_menu(request):
     return render(request, "core/biblio_menu.html")
 
-@require_login
-def admin_menu(request):
-    if request.session.get("user_tipo") != "admin":
-        return HttpResponseForbidden("No autorizado")
-    return render(request, "core/admin_menu.html")
+# 🔥 Se eliminó admin_menu porque ahora se usa el admin de Django
 
 
 # --------------------------------
@@ -185,21 +186,14 @@ def libro_add(request):
         titulo = request.POST.get("titulo", "").strip()
         autor = request.POST.get("autor", "").strip()
         genero = request.POST.get("genero", "").strip()
-        año = request.POST.get("año", "")
-        cantidad = request.POST.get("cantidad", "")
+        año = int(request.POST.get("año", 0))
+        cantidad = int(request.POST.get("cantidad", 0))
         isbn = request.POST.get("isbn", "").strip()
-
-        try:
-            año_i = int(año)
-            cantidad_i = int(cantidad)
-        except:
-            return render(request, "core/libro_form.html",
-                          {"error": "Año/cantidad inválidos", "form": request.POST})
 
         try:
             execute(
                 "INSERT INTO libros (titulo, autor, genero, año, cantidad, isbn) VALUES (?, ?, ?, ?, ?, ?)",
-                (titulo, autor, genero, año_i, cantidad_i, isbn)
+                (titulo, autor, genero, año, cantidad, isbn)
             )
             return redirect("libros_lista")
         except sqlite3.IntegrityError:
@@ -270,7 +264,7 @@ def libro_delete(request, libro_id):
 
 
 # --------------------------------
-# PEDIR PRÉSTAMO (solo universitarios)
+# PEDIR PRÉSTAMO
 # --------------------------------
 @require_login
 def pedir_prestamo(request, libro_id):
