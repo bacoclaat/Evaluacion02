@@ -70,10 +70,10 @@ def login_view(request):
             return redirect("/django-admin/")   # << IR AL PANEL DJANGO ADMIN
 
         if tipo == "universitario":
-            return redirect("uni_menu")
+            return redirect("menu_universitario")
 
         if tipo == "bibliotecario":
-            return redirect("biblio_menu")
+            return redirect("menu_bibliotecario")
 
         messages.error(request, "Tipo de usuario desconocido.")
         return render(request, "core/login.html")
@@ -124,11 +124,11 @@ def register_view(request):
 # MENÚS
 @require_login
 def uni_menu(request):
-    return render(request, "core/uni_menu.html")
+    return render(request, "core/menu_universitario.html")
 
 @require_login
 def biblio_menu(request):
-    return render(request, "core/biblio_menu.html")
+    return render(request, "core/menu_bibliotecario.html")
 
 
 # LISTA DE LIBROS
@@ -147,7 +147,7 @@ def libros_lista(request):
         for r in rows
     ]
 
-    return render(request, "core/libros_lista.html", {
+    return render(request, "core/libros_list.html", {
         "libros": libros,
         "bibliotecario": tipo == "bibliotecario",
         "universitario": tipo == "universitario"

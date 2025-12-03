@@ -9,11 +9,11 @@ urlpatterns = [
     path("registro/", views.register_view, name="register"),
 
     # menus normales
-    path("uni/menu/", views.uni_menu, name="uni_menu"),
-    path("biblio/menu/", views.biblio_menu, name="biblio_menu"),
+    path("uni/menu/", views.uni_menu, name="menu_universitario"),
+    path("biblio/menu/", views.biblio_menu, name="menu_bibliotecario"),
 
     # libros
-    path("libros/", views.libros_lista, name="libros_lista"),
+    path("libros/", views.libros_lista, name="libros_list"),
     path("libros/add/", views.libro_add, name="libro_add"),
     path("libros/<int:libro_id>/edit/", views.libro_edit, name="libro_edit"),
     path("libros/<int:libro_id>/delete/", views.libro_delete, name="libro_delete"),
