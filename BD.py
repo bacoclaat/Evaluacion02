@@ -20,8 +20,7 @@ def init_db():
                  (usuario_id INTEGER PRIMARY KEY,
                   universidad TEXT NOT NULL,
                   FOREIGN KEY (usuario_id) REFERENCES usuarios (id))''')
-    
-    # Tabla para universitarios
+    # Tabla para admin
     c.execute('''CREATE TABLE IF NOT EXISTS admin
                  (usuario_id INTEGER PRIMARY KEY,
                   FOREIGN KEY (usuario_id) REFERENCES usuarios (id))''')
@@ -35,7 +34,8 @@ def init_db():
                   año INTEGER NOT NULL,
                   cantidad INTEGER NOT NULL,
                   isbn TEXT UNIQUE NOT NULL)''')
-    # Tabla de préstamos
+                  
+    # Tabla de prestamos (MODIFICADA: Agregamos is_activo y fch_devolucion_real)
     c.execute('''CREATE TABLE IF NOT EXISTS prestamos
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   universitario_id INTEGER NOT NULL,
@@ -43,8 +43,21 @@ def init_db():
                   dias INTEGER NOT NULL,
                   fch_prestamo DATE NOT NULL,
                   fch_devolucion DATE NOT NULL,
+                  is_activo INTEGER NOT NULL DEFAULT 1,         -- NUEVO: 1=Activo, 0=Devuelto
+                  fch_devolucion_real DATE,                      -- NUEVO: Fecha en que se devuelve
                   FOREIGN KEY (universitario_id) REFERENCES universitarios (usuario_id),
                   FOREIGN KEY (libro_id) REFERENCES libros (id))''')
+
+     # Tabla de auditoría (funcion de las reservas con registro)
+    c.execute('''CREATE TABLE IF NOT EXISTS auditoria
+             (id INTEGER PRIMARY KEY AUTOINCREMENT,
+              usuario_id INTEGER NOT NULL,
+              accion TEXT NOT NULL,
+              tabla_afectada TEXT NOT NULL,
+              detalle TEXT,
+              fecha DATE NOT NULL,
+              FOREIGN KEY (usuario_id) REFERENCES usuarios (id))''')
+              
     conn.commit()
     conn.close()
 

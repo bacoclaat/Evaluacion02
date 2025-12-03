@@ -267,6 +267,9 @@ class Libro:
             conn.close()
 
 
+from datetime import datetime, timedelta, date
+import sqlite3
+
 class Prestamo:
     def __init__(self, universitario, libro, dias):
         # Maximo 14 dias de prestamo
@@ -283,40 +286,59 @@ class Prestamo:
         self._universitario = universitario
         self._libro = libro
         self._dias = dias
-        self._fch_prestamo = date.today()
-        self._fch_devolucion = self._fch_prestamo + timedelta(days=dias)
+        self._fch_prestamo = date.today().strftime('%Y-%m-%d')
+        self._fch_devolucion = (date.today() + timedelta(days=dias)).strftime('%Y-%m-%d')
+        self._is_activo = 1 
+        self._fch_devolucion_real = None 
         
-
-# Aca la base de datos o el crud tiene que ir actualizando el dia actual, para saber cuando se tiene que devolver el libro
     def ver_prestamo(self):
-        dias_restantes = (self._fch_devolucion - date.today()).days
-        print(f"Universitario: {self._universitario.nombre}, Libro: {self._libro.titulo}, Fecha de prestamo: {self._fch_prestamo}, Fecha de devolucion: {self._fch_devolucion}, Dias restantes: {dias_restantes}")
-        if dias_restantes < 0:
-            print("El libro está atrasado.")
+        fch_dev_dt = datetime.strptime(self._fch_devolucion, '%Y-%m-%d').date()
+        fch_prestamo_dt = datetime.strptime(self._fch_prestamo, '%Y-%m-%d').date()
+        
+        dias_restantes = (fch_dev_dt - date.today()).days
+        
+        estado = "ACTIVO"
+        if not self._is_activo:
+            estado = f"DEVUELTO ({self._fch_devolucion_real})"
+        elif dias_restantes < 0:
+            estado = "ATRASADO"
+        
+        print(f"Universitario: {self._universitario.nombre}, Libro: {self._libro.titulo}")
+        print(f"Fecha de prestamo: {fch_prestamo_dt}, Vencimiento: {fch_dev_dt}, Estado: {estado}")
+        if dias_restantes >= 0 and self._is_activo:
+            print(f"Días restantes: {dias_restantes}")
+
 
     def save(self):
         conn = sqlite3.connect('biblioteca.db')
         c = conn.cursor()
+        
+        # 1. Verificar Universitario
         c.execute("SELECT id FROM usuarios WHERE id = ? AND tipo = 'universitario'", (self._universitario.id,))
         if not c.fetchone():
             conn.close()
             raise ValueError("El universitario no existe en la base de datos.")
-        else:
-            c.execute("SELECT cantidad FROM libros WHERE id = ?", (self._libro.id,))
-            fila = c.fetchone()
+            
+        # 2. Verificar Libro
+        c.execute("SELECT cantidad FROM libros WHERE id = ?", (self._libro.id,))
+        fila = c.fetchone()
         if not fila:
             conn.close()
             raise ValueError("El libro no existe.")
-        else:
-            cantidad = fila[0]
-            if cantidad <= 0:
-                conn.close()
-                raise ValueError("No hay copias disponibles de este libro.")
-            else:
-                c.execute("INSERT INTO prestamos (universitario_id, libro_id, dias, fch_prestamo, fch_devolucion) VALUES (?, ?, ?, ?, ?)", (self._universitario.id, self._libro.id, self._dias, self._fch_prestamo, self._fch_devolucion))
-                self.id = c.lastrowid
-                c.execute("UPDATE libros SET cantidad = cantidad - 1 WHERE id = ?", (self._libro.id,))
-                conn.commit()
-                conn.close()
         
-
+        cantidad = fila[0]
+        if cantidad <= 0:
+            conn.close()
+            raise ValueError("No hay copias disponibles de este libro.")
+            
+        # 3. Insertar el préstamo (incluyendo los nuevos campos de estado)
+        c.execute("INSERT INTO prestamos (universitario_id, libro_id, dias, fch_prestamo, fch_devolucion, is_activo) VALUES (?, ?, ?, ?, ?, ?)", 
+                  (self._universitario.id, self._libro.id, self._dias, self._fch_prestamo, self._fch_devolucion, self._is_activo))
+        
+        self.id = c.lastrowid
+        
+        # 4. Actualizar el inventario
+        c.execute("UPDATE libros SET cantidad = cantidad - 1 WHERE id = ?", (self._libro.id,))
+        
+        conn.commit()
+        conn.close()
