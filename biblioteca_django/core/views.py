@@ -6,9 +6,7 @@ from django.contrib import messages
 
 DB_PATH = "biblioteca.db"
 
-# --------------------------------
-# Helpers SQLite
-# --------------------------------
+
 def get_conn():
     return sqlite3.connect(DB_PATH)
 
@@ -38,9 +36,6 @@ def execute(query, params=()):
     return last
 
 
-# --------------------------------
-# Decorador login requerido
-# --------------------------------
 def require_login(view_func):
     def wrapped(request, *args, **kwargs):
         if not request.session.get("user_id"):
@@ -50,9 +45,7 @@ def require_login(view_func):
     return wrapped
 
 
-# --------------------------------
 # LOGIN
-# --------------------------------
 def login_view(request):
     if request.method == "POST":
         email = request.POST.get("email", "").strip()
@@ -73,10 +66,8 @@ def login_view(request):
         request.session["user_tipo"] = tipo
         request.session["user_nombre"] = nombre
 
-        # ---  AQUI CAMBIA ---
         if tipo == "admin":
             return redirect("/django-admin/")   # << IR AL PANEL DJANGO ADMIN
-        # -----------------------
 
         if tipo == "universitario":
             return redirect("uni_menu")
@@ -90,17 +81,13 @@ def login_view(request):
     return render(request, "core/login.html")
 
 
-# --------------------------------
 # LOGOUT
-# --------------------------------
 def logout_view(request):
     request.session.flush()
     return redirect("login")
 
 
-# --------------------------------
-# REGISTRO (usa register.html)
-# --------------------------------
+# REGISTRO
 def register_view(request):
     if request.method == "POST":
         nombre = request.POST.get("nombre", "").strip()
@@ -109,7 +96,6 @@ def register_view(request):
         tipo = request.POST.get("tipo", "universitario").strip()
         universidad = request.POST.get("universidad", "").strip()
 
-        # Seguridad: impedir admins creados por formulario
         if tipo == "admin":
             tipo = "universitario"
 
@@ -135,9 +121,7 @@ def register_view(request):
     return render(request, "core/register.html")
 
 
-# --------------------------------
 # MENÚS
-# --------------------------------
 @require_login
 def uni_menu(request):
     return render(request, "core/uni_menu.html")
@@ -146,12 +130,8 @@ def uni_menu(request):
 def biblio_menu(request):
     return render(request, "core/biblio_menu.html")
 
-# 🔥 Se eliminó admin_menu porque ahora se usa el admin de Django
 
-
-# --------------------------------
 # LISTA DE LIBROS
-# --------------------------------
 @require_login
 def libros_lista(request):
     tipo = request.session.get("user_tipo")
@@ -174,9 +154,8 @@ def libros_lista(request):
     })
 
 
-# --------------------------------
+
 # AGREGAR LIBRO
-# --------------------------------
 @require_login
 def libro_add(request):
     if request.session.get("user_tipo") != "bibliotecario":
@@ -203,9 +182,8 @@ def libro_add(request):
     return render(request, "core/libro_form.html")
 
 
-# --------------------------------
+
 # EDITAR LIBRO
-# --------------------------------
 @require_login
 def libro_edit(request, libro_id):
     if request.session.get("user_tipo") != "bibliotecario":
@@ -242,9 +220,8 @@ def libro_edit(request, libro_id):
     return render(request, "core/libro_form.html", {"libro": libro})
 
 
-# --------------------------------
+
 # ELIMINAR LIBRO
-# --------------------------------
 @require_login
 def libro_delete(request, libro_id):
     if request.session.get("user_tipo") != "bibliotecario":
@@ -263,9 +240,8 @@ def libro_delete(request, libro_id):
     return render(request, "core/libro_confirm_delete.html", {"libro": libro})
 
 
-# --------------------------------
+
 # PEDIR PRÉSTAMO
-# --------------------------------
 @require_login
 def pedir_prestamo(request, libro_id):
     if request.session.get("user_tipo") != "universitario":
@@ -311,9 +287,8 @@ def pedir_prestamo(request, libro_id):
     return render(request, "core/pedir_prestamo.html", {"libro": libro})
 
 
-# --------------------------------
+
 # MIS PRÉSTAMOS
-# --------------------------------
 @require_login
 def uni_mis_prestamos(request):
     uid = request.session.get("user_id")
@@ -334,9 +309,8 @@ def uni_mis_prestamos(request):
     return render(request, "core/mis_prestamos.html", {"prestamos": prestamos})
 
 
-# --------------------------------
+
 # VER PRÉSTAMOS (bibliotecario)
-# --------------------------------
 @require_login
 def biblio_ver_prestamos(request):
     if request.session.get("user_tipo") != "bibliotecario":
@@ -361,9 +335,8 @@ def biblio_ver_prestamos(request):
     return render(request, "core/ver_prestamos.html", {"prestamos": prestamos})
 
 
-# --------------------------------
+
 # ADMIN — LISTAR USUARIOS
-# --------------------------------
 @require_login
 def admin_listar_usuarios(request):
     if request.session.get("user_tipo") != "admin":
@@ -379,9 +352,8 @@ def admin_listar_usuarios(request):
     return render(request, "core/admin_usuarios.html", {"usuarios": usuarios})
 
 
-# --------------------------------
+
 # ADMIN — EDITAR USUARIO
-# --------------------------------
 @require_login
 def admin_editar_usuario(request, usuario_id):
     if request.session.get("user_tipo") != "admin":
@@ -429,9 +401,8 @@ def admin_editar_usuario(request, usuario_id):
     })
 
 
-# --------------------------------
+
 # ADMIN — ELIMINAR USUARIO
-# --------------------------------
 @require_login
 def admin_eliminar_usuario(request, usuario_id):
     if request.session.get("user_tipo") != "admin":
