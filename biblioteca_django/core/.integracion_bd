@@ -6,11 +6,11 @@ from datetime import datetime
 import requests
 from requests.exceptions import RequestException
 
-# --- CONSTANTES ---
+# CONSTANTES
 # Asegúrate de que este sea el nombre de tu archivo de base de datos SQLite
 DB_NAME = 'biblioteca.db' 
 
-# --- FUNCIÓN DE AUDITORÍA ---
+# FUNCIÓN DE AUDITORÍA
 
 def log_auditoria(usuario_id, accion, tabla_afectada, detalle):
     """Registra una acción importante en la tabla de auditoría (SQLite)."""
@@ -27,7 +27,7 @@ def log_auditoria(usuario_id, accion, tabla_afectada, detalle):
         print(f"ERROR DE AUDITORÍA: No se pudo registrar la acción. {e}")
 
 
-# --- FUNCIÓN DE API EXTERNA ---
+# FUNCIÓN DE API EXTERNA
 
 def get_valor_uf():
     """Obtiene el valor actual de la UF de la API de Mindicador (para multas)."""

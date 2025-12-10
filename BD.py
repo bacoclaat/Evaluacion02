@@ -35,7 +35,7 @@ def init_db():
                   cantidad INTEGER NOT NULL,
                   isbn TEXT UNIQUE NOT NULL)''')
                   
-    # Tabla de prestamos (MODIFICADA: Agregamos is_activo y fch_devolucion_real)
+    # Tabla de prestamos
     c.execute('''CREATE TABLE IF NOT EXISTS prestamos
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                   universitario_id INTEGER NOT NULL,
@@ -48,7 +48,7 @@ def init_db():
                   FOREIGN KEY (universitario_id) REFERENCES universitarios (usuario_id),
                   FOREIGN KEY (libro_id) REFERENCES libros (id))''')
 
-     # Tabla de auditoría (funcion de las reservas con registro)
+     # Tabla de auditoría
     c.execute('''CREATE TABLE IF NOT EXISTS auditoria
              (id INTEGER PRIMARY KEY AUTOINCREMENT,
               usuario_id INTEGER NOT NULL,

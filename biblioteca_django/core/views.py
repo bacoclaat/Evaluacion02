@@ -1,429 +1,605 @@
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.http import JsonResponse # Necesario para las APIs de Mindicador
-from datetime import date, timedelta
-import bcrypt
-import requests
+# core/views.py
+
+from django.shortcuts import render
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_http_methods
+from django.db import transaction
 import json
-from requests.exceptions import RequestException
+from datetime import datetime
+from django.db.models import F
+from django.core.exceptions import ObjectDoesNotExist
 
-# --- Integración con la lógica de auditoría y API externa ---
-# Asegúrate de que este archivo exista y contenga log_auditoria y get_valor_uf
-from .integracion_bd import log_auditoria, get_valor_uf 
-
-from .models import Usuario, Universitario, Bibliotecario, Admin, Libro, Prestamo
-
-# --- Importaciones de DRF ---
-from rest_framework import viewsets
-from .serializers import (
-    UsuarioSerializer, UniversitarioSerializer, BibliotecarioSerializer,
-    AdminSerializer, LibroSerializer, PrestamoSerializer
-)
+# --- IMPORTS DE MODELOS Y UTILIDADES ---
+from .models import Libro, Prestamo, Universitario, Bibliotecario
+from .utils import log_auditoria
+# ---------------------------------------
 
 
-# ----------------------------
-# VIEWSETS DRF (API REST GESTIÓN)
-# ----------------------------
-class UsuarioViewSet(viewsets.ModelViewSet):
-    queryset = Usuario.objects.all()
-    serializer_class = UsuarioSerializer
+# ==========================================================================
+# 1. SERIALIZADORES / HELPERS
+# ==========================================================================
 
-class UniversitarioViewSet(viewsets.ModelViewSet):
-    queryset = Universitario.objects.all()
-    serializer_class = UniversitarioSerializer
+def is_bibliotecario(user):
+    """Verifica si el usuario es un bibliotecario."""
+    return Bibliotecario.objects.filter(usuario=user).exists()
 
-class BibliotecarioViewSet(viewsets.ModelViewSet):
-    queryset = Bibliotecario.objects.all()
-    serializer_class = BibliotecarioSerializer
-
-class AdminViewSet(viewsets.ModelViewSet):
-    queryset = Admin.objects.all()
-    serializer_class = AdminSerializer
-
-class LibroViewSet(viewsets.ModelViewSet):
-    queryset = Libro.objects.all()
-    serializer_class = LibroSerializer
-
-class PrestamoViewSet(viewsets.ModelViewSet):
-    queryset = Prestamo.objects.all()
-    serializer_class = PrestamoSerializer
-
-
-# ----------------------------
-# API INDICADORES ECONÓMICOS
-# ----------------------------
-def indicadores(request):
-    url = "https://mindicador.cl/api"
-    try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status() 
-        data = response.json()
-        return JsonResponse(data)
-    except RequestException as e:
-        return JsonResponse({"error": f"Error de conexión con la API externa. Detalle: {e}"}, status=503)
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "La respuesta de la API no es un JSON válido."}, status=500)
-    except Exception as e:
-        return JsonResponse({"error": f"Error inesperado: {e}"}, status=500)
-
-def indicador(request, nombre):
-    url = f"https://mindicador.cl/api/{nombre}"
-    try:
-        response = requests.get(url, timeout=5)
-        response.raise_for_status() 
-
-        data = response.json()
-        return JsonResponse(data)
-    except RequestException as e:
-        return JsonResponse({"error": f"No se pudo obtener el indicador o nombre inválido. Detalle: {e}"}, status=400)
-    except json.JSONDecodeError:
-        return JsonResponse({"error": "La respuesta de la API no es un JSON válido."}, status=500)
-    except Exception as e:
-        return JsonResponse({"error": f"Error inesperado: {e}"}, status=500)
-
-
-# ----------------------------
-# VISTAS WEB Y AUDITORÍA
-# ----------------------------
-def inicio_view(request):
-    return render(request, "core/inicio.html")
-
-
-# ----------------------------
-# REGISTRO
-# ----------------------------
-def registro_view(request):
-    if request.method == "POST":
-        nombre = request.POST.get("nombre").strip()
-        email = request.POST.get("email").strip()
-        password = request.POST.get("password")
-        tipo = request.POST.get("tipo")
-
-        if Usuario.objects.filter(email=email).exists():
-            messages.error(request, "Este correo ya está registrado.")
-            return redirect("registro")
-
-        pwd_hash = bcrypt.hashpw(password.encode("latin-1"), bcrypt.gensalt())
-
-        user = Usuario(
-            nombre=nombre,
-            email=email,
-            password_hash=pwd_hash.decode("latin-1"),
-            tipo=tipo
-        )
-        user.save()
-        log_auditoria(user.id, 'REGISTRO', 'usuarios', f'Registro inicial de {user.nombre}')
-
-        if tipo == "universitario":
-            Universitario.objects.create(usuario=user, universidad="No asignada")
-            log_auditoria(user.id, 'ACTUALIZACION', 'universitarios', 'Perfil creado como universitario')
-        elif tipo == "bibliotecario":
-            Bibliotecario.objects.create(usuario=user, universidad="No asignada")
-            log_auditoria(user.id, 'ACTUALIZACION', 'bibliotecarios', 'Perfil creado como bibliotecario')
-        else:
-            Admin.objects.create(usuario=user)
-            log_auditoria(user.id, 'ACTUALIZACION', 'admin', 'Perfil creado como admin') 
-
-
-        messages.success(request, "Registro exitoso. Ahora puedes iniciar sesión.")
-        return redirect("login")
-
-    return render(request, "core/registro.html")
-
-
-# ----------------------------
-# LOGIN
-# ----------------------------
-def login_view(request):
-    if request.method == "POST":
-        email = request.POST.get("email").strip()
-        password = request.POST.get("password").strip()
-        user = None
-
-        try:
-            user = Usuario.objects.get(email=email)
-        except Usuario.DoesNotExist:
-            messages.error(request, "Usuario no encontrado")
-            return redirect("login")
-
-        ph = user.password_hash
-        ph_bytes = ph.encode('latin-1') if isinstance(ph, str) else ph
-
-        if not bcrypt.checkpw(password.encode('latin-1'), ph_bytes):
-            log_auditoria(user.id, 'LOGIN_FALLIDO', 'usuarios', 'Contraseña incorrecta') 
-            messages.error(request, "Contraseña incorrecta")
-            return redirect("login")
-
-        log_auditoria(user.id, 'LOGIN_EXITOSO', 'usuarios', f'Inicio de sesión exitoso como {user.tipo}') 
-        request.session['user_id'] = user.id
-        request.session['tipo'] = user.tipo
-
-        if user.tipo == "universitario":
-            return redirect("menu_universitario")
-        if user.tipo == "bibliotecario":
-            return redirect("menu_bibliotecario")
-        return redirect("menu_admin")
-
-    return render(request, "core/login.html")
-
-
-# ----------------------------
-# LOGOUT
-# ----------------------------
-def logout_view(request):
-    user_id = request.session.get('user_id')
-    if user_id:
-        log_auditoria(user_id, 'LOGOUT', 'usuarios', 'Cierre de sesión') 
-    request.session.flush()
-    return redirect("login")
-
-
-# ----------------------------
-# MENÚS
-# ----------------------------
-def menu_universitario(request):
-    if not request.session.get('user_id'):
-        return redirect('login')
-    return render(request, "core/menu_universitario.html")
-
-
-def menu_bibliotecario(request):
-    if not request.session.get('user_id'):
-        return redirect('login')
-    return render(request, "core/menu_bibliotecario.html")
-
-
-def menu_admin(request):
-    if not request.session.get('user_id'):
-        return redirect('login')
-    return render(request, "core/menu_admin.html")
-
-
-# ----------------------------
-# LIBROS
-# ----------------------------
-def ver_libros(request):
-    libros = Libro.objects.all()
-    return render(request, "core/libros.html", {"libros": libros})
-
-
-# ----------------------------
-# PRESTAR LIBRO
-# ----------------------------
-def prestar_libro(request, libro_id):
-    if not request.session.get('user_id'):
-        return redirect('login')
-
-    user = Usuario.objects.get(id=request.session['user_id'])
+def user_serializer(user_instance, role_type):
+    """Serializa un objeto User y su rol asociado para el frontend."""
+    full_name = user_instance.get_full_name() or user_instance.username
+    doc = ""
     
     try:
-        universitario = Universitario.objects.get(usuario=user)
-    except Universitario.DoesNotExist:
-        messages.error(request, "Solo universitarios pueden pedir préstamos")
-        return redirect("ver_libros")
+        if role_type == "Universitario":
+            profile = Universitario.objects.get(usuario=user_instance)
+            doc = profile.doc
+        elif role_type == "Bibliotecario":
+            profile = Bibliotecario.objects.get(usuario=user_instance)
+            doc = profile.doc or "N/A"
+    except ObjectDoesNotExist:
+        pass
+    
+    return {
+        'id': user_instance.pk,
+        'username': user_instance.username,
+        'name': full_name,
+        'doc': doc,
+        'role': role_type,
+    }
+
+def libro_serializer(libro):
+    """Serializa un objeto Libro."""
+    return {
+        'id': libro.pk,
+        'titulo': libro.titulo,
+        'autor': libro.autor,
+        'genero': libro.genero,
+        'año': libro.año,
+        'cantidad': libro.cantidad,
+        'isbn': libro.isbn,
+    }
+
+def prestamo_serializer(prestamo):
+    """Serializa un objeto Prestamo."""
+    # Obtenemos los datos del universitario de forma segura
+    try:
+        uni_data = user_serializer(prestamo.universitario.usuario, "Universitario")
+    except Exception:
+        uni_data = {'id': None, 'name': 'Usuario Eliminado', 'doc': 'N/A', 'role': 'Universitario'}
+        
+    return {
+        'id': prestamo.pk,
+        'libro': libro_serializer(prestamo.libro),
+        'universitario': uni_data,
+        'fch_prestamo': prestamo.fch_prestamo.isoformat(),
+        'fch_devolucion': prestamo.fch_devolucion.isoformat(),
+        'is_activo': prestamo.is_activo,
+        'fch_devolucion_real': prestamo.fch_devolucion_real.isoformat() if prestamo.fch_devolucion_real else None,
+    }
+
+
+# ==========================================================================
+# 2. VISTAS BASE (HTML)
+# ==========================================================================
+
+def index(request):
+    """Renderiza la plantilla principal de la aplicación. Asume que está en 'index.html' dentro de 'templates/'"""
+    return render(request, 'core/index.html') 
+
+
+# ==========================================================================
+# 3. VISTAS DE AUTENTICACIÓN Y SESIÓN
+# ==========================================================================
+
+@require_http_methods(["GET"])
+def check_session(request):
+    """Verifica si el usuario está autenticado y devuelve sus datos."""
+    if request.user.is_authenticated:
+        role = "Bibliotecario" if is_bibliotecario(request.user) else "Universitario"
+        
+        # Cargar 'doc' del perfil
+        doc = ""
+        try:
+            profile = Universitario.objects.get(usuario=request.user)
+            doc = profile.doc
+        except ObjectDoesNotExist:
+            try:
+                profile = Bibliotecario.objects.get(usuario=request.user)
+                doc = profile.doc
+            except ObjectDoesNotExist:
+                pass
+
+        return JsonResponse({
+            'is_authenticated': True,
+            'user_id': request.user.pk,
+            'role': role,
+            'full_name': request.user.get_full_name() or request.user.username,
+            'doc': doc or 'N/A',
+            'message': 'Sesión activa.'
+        })
+    return JsonResponse({'is_authenticated': False, 'message': 'No hay sesión activa.'})
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def register_user(request):
+    """Registra un nuevo usuario y su rol asociado."""
+    try:
+        data = json.loads(request.body)
+        full_name = data.get('full_name').strip()
+        doc = data.get('doc').strip()
+        email = data.get('email').strip()
+        password = data.get('password')
+        role = data.get('role')
+        username = data.get('username')
+
+        if not all([full_name, email, password, role, username]):
+            return JsonResponse({'success': False, 'message': 'Faltan campos obligatorios.'}, status=400)
+        
+        if role == "Universitario" and not doc:
+            return JsonResponse({'success': False, 'message': 'El documento (RUT/DNI) es obligatorio para Universitarios.'}, status=400)
+        
+        if User.objects.filter(username=username).exists():
+            return JsonResponse({'success': False, 'message': 'El nombre de usuario ya existe.'}, status=400)
+        
+        if User.objects.filter(email=email).exists():
+            return JsonResponse({'success': False, 'message': 'El correo electrónico ya está registrado.'}, status=400)
+        
+        if role == "Universitario" and Universitario.objects.filter(doc=doc).exists():
+            return JsonResponse({'success': False, 'message': 'El documento (RUT/DNI) ya está registrado.'}, status=400)
+
+        with transaction.atomic():
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password,
+                first_name=full_name.split(' ')[0],
+                last_name=' '.join(full_name.split(' ')[1:]),
+                # El bibliotecario debe ser staff si tiene permisos de gestión
+                is_staff=(role == "Bibliotecario") 
+            )
+
+            if role == "Bibliotecario":
+                Bibliotecario.objects.create(usuario=user) 
+            elif role == "Universitario":
+                Universitario.objects.create(usuario=user, doc=doc) 
+            
+            log_auditoria(user.id, 'REGISTRO', role, f'Usuario {username} registrado con rol {role}.')
+
+        return JsonResponse({'success': True, 'message': f'Usuario {username} registrado exitosamente.'}, status=201)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Formato JSON inválido.'}, status=400)
+    except Exception as e:
+        print(f"Error en registro: {e}")
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor al registrar.'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def login_user(request):
+    """Autentica al usuario."""
+    try:
+        data = json.loads(request.body)
+        username = data.get('username')
+        password = data.get('password')
+
+        user = authenticate(request, username=username, password=password)
+
+        if user is not None:
+            login(request, user)
+            role = "Bibliotecario" if is_bibliotecario(user) else "Universitario"
+            
+            doc = ""
+            try:
+                profile = Universitario.objects.get(usuario=user)
+                doc = profile.doc
+            except ObjectDoesNotExist:
+                 try:
+                    profile = Bibliotecario.objects.get(usuario=user)
+                    doc = profile.doc
+                 except ObjectDoesNotExist:
+                    pass
+
+            log_auditoria(user.id, 'LOGIN', role, f'Usuario {username} ha iniciado sesión.')
+            
+            return JsonResponse({
+                'success': True, 
+                'message': 'Inicio de sesión exitoso.',
+                'user_id': user.pk,
+                'role': role,
+                'full_name': user.get_full_name() or user.username,
+                'doc': doc or 'N/A'
+            })
+        else:
+            return JsonResponse({'success': False, 'message': 'Usuario o contraseña incorrectos.'}, status=401)
+
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Formato JSON inválido.'}, status=400)
+    except Exception:
+        return JsonResponse({'success': False, 'message': 'Error interno del servidor.'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def logout_user(request):
+    """Cierra la sesión del usuario."""
+    if request.user.is_authenticated:
+        log_auditoria(request.user.id, 'LOGOUT', 'User', f'Usuario {request.user.username} ha cerrado sesión.')
+        logout(request)
+        return JsonResponse({'success': True, 'message': 'Sesión cerrada exitosamente.'})
+    return JsonResponse({'success': False, 'message': 'No hay sesión para cerrar.'})
+
+
+# ==========================================================================
+# 4. VISTAS DE LIBROS (CRUD)
+# ==========================================================================
+
+@require_http_methods(["GET"])
+def get_books(request):
+    """Devuelve la lista de todos los libros."""
+    libros = Libro.objects.all()
+    data = [libro_serializer(libro) for libro in libros]
+    return JsonResponse(data, safe=False)
+
+
+@csrf_exempt
+@login_required
+@require_http_methods(["POST"])
+def add_book(request):
+    """Agrega un nuevo libro. Solo para bibliotecarios."""
+    if not is_bibliotecario(request.user):
+        return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
+    
+    try:
+        data = json.loads(request.body)
+        Libro.objects.create(
+            titulo=data['titulo'],
+            autor=data['autor'],
+            genero=data['genero'],
+            año=data.get('año', datetime.now().year),
+            cantidad=data['cantidad'],
+            isbn=data['isbn'],
+        )
+        log_auditoria(request.user.id, 'LIBRO_ADD', 'Libro', f'Libro {data["titulo"]} agregado.')
+        return JsonResponse({'success': True, 'message': 'Libro agregado exitosamente.'}, status=201)
+    
+    except KeyError as e:
+        return JsonResponse({'success': False, 'message': f'Faltan datos obligatorios del libro: {e}'}, status=400)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error al guardar: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@login_required
+@require_http_methods(["DELETE"])
+def delete_book(request, libro_id):
+    """Elimina un libro. Solo para bibliotecarios."""
+    if not is_bibliotecario(request.user):
+        return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
+        
+    try:
+        libro = Libro.objects.get(pk=libro_id)
+        if Prestamo.objects.filter(libro=libro, is_activo=True).exists():
+            return JsonResponse({'success': False, 'message': 'No se puede eliminar: tiene préstamos activos.'}, status=400)
+        
+        log_auditoria(request.user.id, 'LIBRO_DEL', 'Libro', f'Libro {libro.titulo} eliminado.')
+        libro.delete()
+        return JsonResponse({'success': True, 'message': 'Libro eliminado.'})
+        
+    except Libro.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Libro no encontrado.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error al eliminar: {str(e)}'}, status=500)
+
+
+# ==========================================================================
+# 5. VISTAS DE USUARIOS (CRUD - Solo GET y DELETE básico)
+# ==========================================================================
+
+@login_required
+@require_http_methods(["GET"])
+def get_users(request):
+    """Devuelve la lista de universitarios. Solo para bibliotecarios."""
+    if not is_bibliotecario(request.user):
+        return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
+    
+    universitarios = Universitario.objects.select_related('usuario').all()
+    data = [user_serializer(u.usuario, "Universitario") for u in universitarios]
+    
+    return JsonResponse(data, safe=False)
+
+
+@csrf_exempt
+@login_required
+@require_http_methods(["DELETE"])
+def delete_user(request, user_id):
+    """Elimina un usuario (User). Solo para bibliotecarios."""
+    if not is_bibliotecario(request.user):
+        return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
+        
+    try:
+        user = User.objects.get(pk=user_id)
+        
+        if user.pk == request.user.pk:
+            return JsonResponse({'success': False, 'message': 'No puedes eliminar tu propia cuenta.'}, status=400)
+            
+        if Universitario.objects.filter(usuario=user).exists():
+             uni = Universitario.objects.get(usuario=user)
+             if Prestamo.objects.filter(universitario=uni, is_activo=True).exists():
+                 return JsonResponse({'success': False, 'message': 'No se puede eliminar: el usuario tiene préstamos activos.'}, status=400)
+        
+        log_auditoria(request.user.id, 'USER_DEL', 'User', f'Usuario {user.username} eliminado.')
+        user.delete()
+        return JsonResponse({'success': True, 'message': 'Usuario y perfil asociado eliminados.'})
+        
+    except User.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Usuario no encontrado.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error al eliminar: {str(e)}'}, status=500)
+
+
+# ==========================================================================
+# 6. VISTAS DE PRÉSTAMOS (CRUD)
+# ==========================================================================
+
+@login_required
+@require_http_methods(["GET"])
+def get_all_loans(request):
+    """Devuelve todos los préstamos. Solo para bibliotecarios."""
+    if not is_bibliotecario(request.user):
+        return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
+
+    prestamos = Prestamo.objects.select_related('libro', 'universitario__usuario').all().order_by('-is_activo', '-fch_prestamo')
+    data = [prestamo_serializer(p) for p in prestamos]
+    return JsonResponse(data, safe=False)
+
+
+@login_required
+@require_http_methods(["GET"])
+def get_user_loans(request, user_id):
+    """Devuelve los préstamos de un usuario específico."""
+    if not is_bibliotecario(request.user) and request.user.pk != user_id:
+        return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
 
     try:
-        libro = Libro.objects.get(id=libro_id)
-    except Libro.DoesNotExist:
-        messages.error(request, "Libro no encontrado.")
-        return redirect("ver_libros")
+        universitario = Universitario.objects.get(usuario_id=user_id)
+    except Universitario.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Perfil de universitario no encontrado.'}, status=404)
+        
+    prestamos = Prestamo.objects.filter(universitario=universitario).select_related('libro', 'universitario__usuario').order_by('-is_activo', '-fch_prestamo')
+    data = [prestamo_serializer(p) for p in prestamos]
+    return JsonResponse(data, safe=False)
 
 
-    if request.method == "POST":
-        user_id = request.session['user_id']
-        try:
-            dias = int(request.POST.get("dias"))
-            if dias <= 0 or dias > 14:
-                raise ValueError("Días inválidos")
-        except:
-            messages.error(request, "Ingrese días válidos (1-14)")
-            return redirect("prestar", libro_id=libro_id)
+@csrf_exempt
+@login_required
+@require_http_methods(["POST"])
+def add_loan(request):
+    """Registra un nuevo préstamo."""
+    try:
+        data = json.loads(request.body)
+        libro_id = data.get('libro_id')
+        universitario_id = data.get('universitario_id')
+        fch_prestamo_str = data.get('fch_prestamo')
+        fch_devolucion_str = data.get('fch_devolucion')
+        
+        if not all([libro_id, universitario_id, fch_prestamo_str, fch_devolucion_str]):
+            return JsonResponse({'success': False, 'message': 'Faltan datos obligatorios para el préstamo.'}, status=400)
+
+        if not is_bibliotecario(request.user) and request.user.pk != universitario_id:
+            return JsonResponse({'success': False, 'message': 'Permiso denegado para prestar a terceros.'}, status=403)
+        
+        libro = Libro.objects.get(pk=libro_id)
+        universitario = Universitario.objects.get(usuario_id=universitario_id)
+        
+        if Prestamo.objects.filter(libro=libro, is_activo=True, universitario=universitario).count() > 0:
+             return JsonResponse({'success': False, 'message': 'El usuario ya tiene prestado este libro.'}, status=400)
 
         if libro.cantidad <= 0:
-            messages.error(request, "No hay copias disponibles")
-            return redirect("ver_libros")
+            return JsonResponse({'success': False, 'message': 'No hay copias disponibles de este libro.'}, status=400)
 
-        # --- CREACIÓN DEL PRÉSTAMO CON CAMPOS DE ESTADO ---
-        prestamo = Prestamo(
-            universitario=universitario,
-            libro=libro,
-            dias=dias,
-            fch_prestamo=date.today(),
-            fch_devolucion=date.today() + timedelta(days=dias),
-            is_activo=True,
-            fch_devolucion_real=None
-        )
-        prestamo.save()
-
-        # AUDITORÍA
-        log_auditoria(user_id, 'PRESTAMO_CREADO', 'prestamos', f'Préstamo ID {prestamo.id} creado para Libro {libro_id}')
-
-        # ACTUALIZACIÓN DE INVENTARIO
-        libro.cantidad -= 1
-        libro.save()
-
-        messages.success(request, f"Prestado: {libro.titulo} por {dias} días")
-        return redirect("ver_prestamos")
-
-    return render(request, "core/prestar.html", {"libro": libro})
-
-
-# ----------------------------
-# VER PRÉSTAMOS
-# ----------------------------
-def ver_prestamos(request):
-    if not request.session.get('user_id'):
-        return redirect('login')
-
-    user = Usuario.objects.get(id=request.session['user_id'])
-    
-    # Filtramos por préstamos activos
-    if user.tipo == "universitario":
-        try:
-            uni = Universitario.objects.get(usuario=user)
-            # Solo mostrar préstamos ACTVOS
-            prestamos = Prestamo.objects.filter(universitario=uni, is_activo=True)
-        except Universitario.DoesNotExist:
-            prestamos = Prestamo.objects.none()
-            
-    else: # Bibliotecario y Admin ven todos los préstamos activos
-        prestamos = Prestamo.objects.filter(is_activo=True)
-
-    # Cálculo de días restantes/atraso para la plantilla (template)
-    for p in prestamos:
-        dias_restantes = (p.fch_devolucion - date.today()).days
-        if dias_restantes < 0:
-            p.estado_display = f"ATRASADO ({abs(dias_restantes)} días)"
-        else:
-            p.estado_display = f"{dias_restantes} días restantes"
-    
-    return render(request, "core/prestamos.html", {"prestamos": prestamos})
-
-
-# ----------------------------
-# REGISTRAR DEVOLUCIÓN
-# ----------------------------
-def registrar_devolucion(request, prestamo_id):
-    if request.session.get('tipo') not in ["bibliotecario", "admin"]:
-        messages.error(request, "Permiso denegado.")
-        return redirect('ver_prestamos') 
+        fch_prestamo = datetime.strptime(fch_prestamo_str, '%Y-%m-%d').date()
+        fch_devolucion = datetime.strptime(fch_devolucion_str, '%Y-%m-%d').date()
         
+        if fch_devolucion < fch_prestamo:
+            return JsonResponse({'success': False, 'message': 'La fecha de devolución no puede ser anterior a la de préstamo.'}, status=400)
+
+        with transaction.atomic():
+            Prestamo.objects.create(
+                libro=libro,
+                universitario=universitario,
+                fch_prestamo=fch_prestamo,
+                fch_devolucion=fch_devolucion,
+                is_activo=True
+            )
+            libro.cantidad = F('cantidad') - 1
+            libro.save(update_fields=['cantidad'])
+            libro.refresh_from_db()
+        
+        log_auditoria(request.user.id, 'PRESTAMO_ADD', 'Prestamo', f'Préstamo de {libro.titulo} a {universitario.usuario.username}.')
+
+        return JsonResponse({'success': True, 'message': 'Préstamo registrado exitosamente.'}, status=201)
+
+    except ObjectDoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Libro o Universitario no encontrado.'}, status=404)
+    except Exception as e:
+        print(f"Error en add_loan: {e}")
+        return JsonResponse({'success': False, 'message': f'Error interno del servidor: {str(e)}'}, status=500)
+
+
+@csrf_exempt
+@login_required
+@require_http_methods(["POST"])
+def return_loan(request, prestamo_id):
+    """Marca un préstamo como devuelto."""
     try:
-        prestamo = Prestamo.objects.get(id=prestamo_id, is_activo=True)
-    except Prestamo.DoesNotExist:
-        messages.error(request, "Préstamo no encontrado o ya devuelto.")
-        return redirect('ver_prestamos') 
-
-    user_id = request.session['user_id']
-    
-    # --- PROCESO DE DEVOLUCIÓN ---
-    
-    # 1. Marcar el préstamo como devuelto
-    prestamo.is_activo = False
-    prestamo.fch_devolucion_real = date.today()
-    prestamo.save()
-    
-    # 2. Aumentar la cantidad del libro en el inventario
-    libro = prestamo.libro
-    libro.cantidad += 1
-    libro.save()
-    
-    # 3. Calcular multa (Integración de API)
-    dias_retraso = (date.today() - prestamo.fch_devolucion).days
-    mensaje_multa = ""
-
-    if dias_retraso > 0:
-        VALOR_UF_HOY = get_valor_uf() 
-        MULTA_POR_DIA_UF = 0.01 
-        multa_total_uf = dias_retraso * MULTA_POR_DIA_UF
-        multa_total_clp = multa_total_uf * VALOR_UF_HOY
+        loan = Prestamo.objects.get(pk=prestamo_id, is_activo=True)
         
-        mensaje_multa = f" **¡MULTA! {dias_retraso} días de retraso.** Total: {multa_total_uf:.2f} UF (${multa_total_clp:,.0f} CLP)"
+        is_staff = is_bibliotecario(request.user)
+        is_owner = loan.universitario.usuario == request.user
+        
+        if not (is_owner or is_staff):
+            return JsonResponse({'success': False, 'message': 'No tienes permiso para devolver este préstamo.'}, status=403)
 
-    # 4. Auditoría
-    log_auditoria(user_id, 'DEVOLUCION', 'prestamos', f'Devolución registrada de Préstamo ID {prestamo_id} por {mensaje_multa}')
+        with transaction.atomic():
+            loan.is_activo = False
+            loan.fch_devolucion_real = datetime.now().date()
+            loan.save(update_fields=['is_activo', 'fch_devolucion_real'])
+
+            libro = loan.libro
+            libro.cantidad = F('cantidad') + 1
+            libro.save(update_fields=['cantidad'])
+            libro.refresh_from_db()
+        
+        log_auditoria(request.user.id, 'PRESTAMO_RET', 'Prestamo', f'Devolución de {libro.titulo} (ID {loan.id})')
+
+        return JsonResponse({'success': True, 'message': 'Libro devuelto exitosamente.'})
     
-    messages.success(request, f"Devolución exitosa para {libro.titulo}. {mensaje_multa}")
-    return redirect("ver_prestamos")
+    except Prestamo.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Préstamo activo no encontrado.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error interno del servidor: {str(e)}'}, status=500)
 
 
-# ----------------------------
-# CRUD — ADMINISTRAR USUARIOS
-# ----------------------------
-def admin_user_list(request):
-    if request.session.get('tipo') != "admin":
-        return redirect("login")
+@csrf_exempt
+@login_required
+@require_http_methods(["DELETE"])
+def delete_loan(request, prestamo_id):
+    """Elimina un registro de préstamo. Solo para bibliotecarios."""
+    if not is_bibliotecario(request.user):
+        return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
 
-    usuarios = Usuario.objects.all()
-    return render(request, "core/admin_user_list.html", {"usuarios": usuarios})
+    try:
+        loan = Prestamo.objects.get(pk=prestamo_id)
 
-
-def admin_user_add(request):
-    if request.session.get('tipo') != "admin":
-        return redirect("login")
-
-    if request.method == "POST":
-        nombre = request.POST.get("nombre")
-        email = request.POST.get("email")
-        password = request.POST.get("password")
-        tipo = request.POST.get("tipo")
-
-        if Usuario.objects.filter(email=email).exists():
-            messages.error(request, "Ese correo ya existe.")
-            return redirect("admin_user_add")
-
-        pwd_hash = bcrypt.hashpw(password.encode("latin-1"), bcrypt.gensalt())
-
-        user = Usuario(
-            nombre=nombre,
-            email=email,
-            password_hash=pwd_hash.decode("latin-1"),
-            tipo=tipo
-        )
-        user.save()
-        log_auditoria(request.session['user_id'], 'ADMIN_CREAR_USUARIO', 'usuarios', f'Usuario {user.id} ({tipo}) creado por Admin')
-
-        if tipo == "universitario":
-            Universitario.objects.create(usuario=user, universidad="No asignada")
-        elif tipo == "bibliotecario":
-            Bibliotecario.objects.create(usuario=user, universidad="No asignada")
-        else:
-            Admin.objects.create(usuario=user)
-
-        messages.success(request, "Usuario creado correctamente.")
-        return redirect("admin_user_list")
-
-    return render(request, "core/admin_user_add.html")
-
-
-def admin_user_edit(request, user_id):
-    if request.session.get('tipo') != "admin":
-        return redirect("login")
-
-    user = Usuario.objects.get(id=user_id)
-
-    if request.method == "POST":
-        user.nombre = request.POST.get("nombre")
-        user.email = request.POST.get("email")
-        user.tipo = request.POST.get("tipo")
-        user.save()
-        log_auditoria(request.session['user_id'], 'ADMIN_EDITAR_USUARIO', 'usuarios', f'Usuario {user_id} modificado por Admin') 
-
-        messages.success(request, "Usuario actualizado correctamente.")
-        return redirect("admin_user_list")
-
-    return render(request, "core/admin_user_edit.html", {"user": user})
-
-
-def admin_user_delete(request, user_id):
-    if request.session.get('tipo') != "admin":
-        return redirect("login")
-
-    user = Usuario.objects.get(id=user_id)
+        with transaction.atomic():
+            if loan.is_activo:
+                libro = loan.libro
+                libro.cantidad = F('cantidad') + 1
+                libro.save(update_fields=['cantidad'])
+                libro.refresh_from_db()
+                
+            loan_id = loan.pk
+            loan.delete()
+        
+        log_auditoria(request.user.id, 'PRESTAMO_DEL', 'Prestamo', f'Préstamo ID {loan_id} eliminado (Forzado).')
+        return JsonResponse({'success': True, 'message': 'Préstamo eliminado exitosamente.'})
     
-    log_auditoria(request.session['user_id'], 'ADMIN_ELIMINAR_USUARIO', 'usuarios', f'Usuario {user_id} eliminado ({user.nombre}) por Admin')
-    
-    user.delete() 
+    except Prestamo.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Préstamo no encontrado.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error interno del servidor: {str(e)}'}, status=500)
 
-    messages.success(request, "Usuario eliminado correctamente.")
-    return redirect("admin_user_list")
+
+@csrf_exempt
+@login_required
+@require_http_methods(["POST"])
+def edit_book(request, libro_id):
+    """Edita un libro existente. Solo para bibliotecarios."""
+    if not is_bibliotecario(request.user):
+        return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
+    
+    try:
+        libro = Libro.objects.get(pk=libro_id)
+        data = json.loads(request.body)
+        
+        # Actualizamos los campos si vienen en el JSON
+        libro.titulo = data.get('titulo', libro.titulo)
+        libro.autor = data.get('autor', libro.autor)
+        libro.genero = data.get('genero', libro.genero)
+        libro.isbn = data.get('isbn', libro.isbn)
+        
+        # Actualizamos cantidad (asegurando que sea entero)
+        if 'cantidad' in data:
+             libro.cantidad = int(data['cantidad'])
+
+        libro.save()
+        
+        log_auditoria(request.user.id, 'LIBRO_EDIT', 'Libro', f'Libro {libro.titulo} editado.')
+        return JsonResponse({'success': True, 'message': 'Libro actualizado exitosamente.'})
+
+    except Libro.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Libro no encontrado.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error al editar: {str(e)}'}, status=500)
+
+@csrf_exempt
+@login_required
+@require_http_methods(["POST"])
+def edit_user(request, user_id):
+    """Edita un usuario existente. Solo para bibliotecarios."""
+    if not is_bibliotecario(request.user):
+        return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
+    
+    try:
+        # Obtenemos el usuario de la tabla de autenticación (User)
+        target_user = User.objects.get(pk=user_id)
+        data = json.loads(request.body)
+        
+        # 1. Actualizar datos básicos (User)
+        full_name = data.get('name', '').strip()
+        if full_name:
+            # Separamos nombre y apellido simple para Django
+            parts = full_name.split(' ')
+            target_user.first_name = parts[0]
+            target_user.last_name = ' '.join(parts[1:]) if len(parts) > 1 else ''
+        
+        if 'email' in data:
+            target_user.email = data['email']
+            
+        target_user.save()
+
+        # 2. Actualizar datos del perfil (Universitario - Doc)
+        # Verificamos si tiene perfil de Universitario
+        if Universitario.objects.filter(usuario=target_user).exists():
+            uni = Universitario.objects.get(usuario=target_user)
+            if 'doc' in data:
+                uni.doc = data['doc']
+                uni.save()
+
+        log_auditoria(request.user.id, 'USER_EDIT', 'User', f'Usuario {target_user.username} editado.')
+        return JsonResponse({'success': True, 'message': 'Usuario actualizado exitosamente.'})
+
+    except User.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Usuario no encontrado.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error al editar: {str(e)}'}, status=500)
+
+@csrf_exempt
+@login_required
+@require_http_methods(["POST"])
+def edit_loan(request, prestamo_id):
+    """Edita un préstamo activo (ej: extender fecha). Solo bibliotecarios."""
+    if not is_bibliotecario(request.user):
+        return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
+    
+    try:
+        loan = Prestamo.objects.get(pk=prestamo_id)
+        data = json.loads(request.body)
+        
+        # Actualizamos fechas
+        if 'fch_prestamo' in data:
+            loan.fch_prestamo = datetime.strptime(data['fch_prestamo'], '%Y-%m-%d').date()
+        if 'fch_devolucion' in data:
+            loan.fch_devolucion = datetime.strptime(data['fch_devolucion'], '%Y-%m-%d').date()
+            
+        # Actualizar el usuario si cambió (asumiendo que viene el ID de usuario)
+        if 'universitario_id' in data and data['universitario_id']:
+            from .models import Universitario
+            uni = Universitario.objects.get(usuario_id=data['universitario_id'])
+            loan.universitario = uni
+
+        loan.save()
+        
+        log_auditoria(request.user.id, 'LOAN_EDIT', 'Prestamo', f'Préstamo ID {loan.id} editado.')
+        return JsonResponse({'success': True, 'message': 'Préstamo actualizado exitosamente.'})
+
+    except Prestamo.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Préstamo no encontrado.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'message': f'Error al editar: {str(e)}'}, status=500)
+

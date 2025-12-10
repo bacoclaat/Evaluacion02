@@ -123,12 +123,12 @@ class Universitario(Usuario):
     def mostrar_info(self):
         conn = sqlite3.connect('biblioteca.db')
         c = conn.cursor()
-        # Obtenemos datos básicos de la tabla usuarios
+
         c.execute("SELECT id, nombre, email FROM usuarios WHERE email = ?", (self._email,))
         fila = c.fetchone()
         if fila:
             id_usuario, nombre, email = fila
-            # Obtenemos universidad de la tabla universitarios
+
             c.execute("SELECT universidad FROM universitarios WHERE usuario_id = ?", (id_usuario,))
             fila_uni = c.fetchone()
             universidad = fila_uni[0] if fila_uni else "No registrada"

@@ -9,7 +9,7 @@ from clases import Usuario, Bibliotecario, Universitario, Libro, Prestamo, Admin
 # Patron de busqueda para encontrar prestamos por ID de usuario
 patron_id = r'^\d+$'
 
-# --- FUNCIONES DE SOPORTE DE API EXTERNA ---
+# FUNCIONES DE SOPORTE DE API EXTERNA
 
 def get_valor_uf():
     """Obtiene el valor actual de la UF de la API de Mindicador."""
@@ -29,9 +29,8 @@ def get_valor_uf():
         return 0.0
 
 
-# --- FUNCIÓN DE AUDITORÍA ---
+# FUNCIÓN DE AUDITORÍA
 def log_auditoria(usuario_id, accion, tabla_afectada, detalle):
-    # Uso de 'with' para asegurar que la conexión se cierre automáticamente
     try:
         with sqlite3.connect('biblioteca.db') as conn:
             c = conn.cursor()
@@ -43,7 +42,7 @@ def log_auditoria(usuario_id, accion, tabla_afectada, detalle):
         print(f"Error al registrar auditoría: {e}")
 
 
-# --- FUNCIONES DE GESTIÓN DE USUARIO Y LOGIN ---
+# FUNCIONES DE GESTIÓN DE USUARIO Y LOGIN
 
 def reglogin():
     while True:
@@ -162,7 +161,7 @@ def ver_libros_disponibles():
         return []
 
 
-# --- FUNCIONES DE GESTIÓN DE PRÉSTAMOS (CORE) ---
+# FUNCIONES DE GESTIÓN DE PRÉSTAMOS
 
 def mostrar_mis_prestamos(universitario_id):
     """
@@ -297,8 +296,8 @@ def realizar_devolucion_admin(prestamo_id, bibliotecario_id):
         
         mensaje_retraso = ""
         if dias_retraso > 0:
-            # --- Lógica de cálculo de multa con la API (MEJORA PROPUESTA) ---
-            VALOR_UF_HOY = get_valor_uf() # Llamada a la nueva función
+            #Lógica de cálculo de multa con la API
+            VALOR_UF_HOY = get_valor_uf()
             MULTA_POR_DIA_UF = 0.01 # Multa hipotética: 0.01 UF por día
             
             multa_total_uf = dias_retraso * MULTA_POR_DIA_UF
@@ -318,7 +317,7 @@ def realizar_devolucion_admin(prestamo_id, bibliotecario_id):
         print(f"\n--- Devolución Exitosa (ID Préstamo: {prestamo_id}) ---")
         print(f"Libro: '{titulo_libro}' por {nombre_uni}.")
         print(f"Fecha de devolución real: {fch_devolucion_real}")
-        print(mensaje_retraso) # Imprimir el mensaje de multa
+        print(mensaje_retraso)
         print("El inventario del libro ha sido actualizado.")
         print("------------------------------------------------")
         return True
@@ -334,7 +333,7 @@ def realizar_devolucion_admin(prestamo_id, bibliotecario_id):
         conn.close()
 
 
-# --- FUNCIÓN MENU UNIVERSITARIO ---
+# FUNCIÓN MENU UNIVERSITARIO
 def menu_universitario(usuario_logeado):
     while True:
         print("=== Menú Universitario ===")
@@ -432,7 +431,7 @@ def menu_universitario(usuario_logeado):
             print("Por favor, ingrese un número válido.")
 
 
-# --- FUNCIÓN MENU BIBLIOTECARIO (ACTUALIZADA con Devoluciones y Auditoría) ---
+# FUNCIÓN MENU BIBLIOTECARIO
 def menu_bibliotecario(usuario_logeado):
     while True:
         print("=== Menú Bibliotecario ===")
@@ -657,7 +656,7 @@ def menu_bibliotecario(usuario_logeado):
             print("Por favor, ingrese un número válido.")
 
 
-# --- FUNCIÓN MENU ADMIN ---
+# FUNCIÓN MENU ADMIN
 def menu_admin(usuario_logeado):
     while True:
         print("=== Menú Admin ===")
