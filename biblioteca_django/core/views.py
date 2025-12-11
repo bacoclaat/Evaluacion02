@@ -1,5 +1,3 @@
-# core/views.py
-
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -9,19 +7,15 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_http_methods
 from django.db import transaction
 import json
-from datetime import datetime
+from datetime import datetime, date
 from django.db.models import F
 from django.core.exceptions import ObjectDoesNotExist
 
-# --- IMPORTS DE MODELOS Y UTILIDADES ---
 from .models import Libro, Prestamo, Universitario, Bibliotecario
 from .utils import log_auditoria
-# ---------------------------------------
 
 
-# ==========================================================================
-# 1. SERIALIZADORES / HELPERS
-# ==========================================================================
+#SERIALIZADORES
 
 def is_bibliotecario(user):
     """Verifica si el usuario es un bibliotecario."""
@@ -64,7 +58,6 @@ def libro_serializer(libro):
 
 def prestamo_serializer(prestamo):
     """Serializa un objeto Prestamo."""
-    # Obtenemos los datos del universitario de forma segura
     try:
         uni_data = user_serializer(prestamo.universitario.usuario, "Universitario")
     except Exception:
@@ -81,18 +74,16 @@ def prestamo_serializer(prestamo):
     }
 
 
-# ==========================================================================
-# 2. VISTAS BASE (HTML)
-# ==========================================================================
+
+#VISTAS BASE (HTML)
 
 def index(request):
     """Renderiza la plantilla principal de la aplicación. Asume que está en 'index.html' dentro de 'templates/'"""
     return render(request, 'core/index.html') 
 
 
-# ==========================================================================
-# 3. VISTAS DE AUTENTICACIÓN Y SESIÓN
-# ==========================================================================
+
+#VISTAS DE AUTENTICACIÓN Y SESIÓN
 
 @require_http_methods(["GET"])
 def check_session(request):
@@ -100,7 +91,6 @@ def check_session(request):
     if request.user.is_authenticated:
         role = "Bibliotecario" if is_bibliotecario(request.user) else "Universitario"
         
-        # Cargar 'doc' del perfil
         doc = ""
         try:
             profile = Universitario.objects.get(usuario=request.user)
@@ -158,7 +148,6 @@ def register_user(request):
                 password=password,
                 first_name=full_name.split(' ')[0],
                 last_name=' '.join(full_name.split(' ')[1:]),
-                # El bibliotecario debe ser staff si tiene permisos de gestión
                 is_staff=(role == "Bibliotecario") 
             )
 
@@ -234,9 +223,7 @@ def logout_user(request):
     return JsonResponse({'success': False, 'message': 'No hay sesión para cerrar.'})
 
 
-# ==========================================================================
-# 4. VISTAS DE LIBROS (CRUD)
-# ==========================================================================
+#VISTAS DE LIBROS (CRUD)
 
 @require_http_methods(["GET"])
 def get_books(request):
@@ -296,9 +283,8 @@ def delete_book(request, libro_id):
         return JsonResponse({'success': False, 'message': f'Error al eliminar: {str(e)}'}, status=500)
 
 
-# ==========================================================================
-# 5. VISTAS DE USUARIOS (CRUD - Solo GET y DELETE básico)
-# ==========================================================================
+
+#VISTAS DE USUARIOS
 
 @login_required
 @require_http_methods(["GET"])
@@ -342,9 +328,8 @@ def delete_user(request, user_id):
         return JsonResponse({'success': False, 'message': f'Error al eliminar: {str(e)}'}, status=500)
 
 
-# ==========================================================================
-# 6. VISTAS DE PRÉSTAMOS (CRUD)
-# ==========================================================================
+
+# VISTAS DE PRÉSTAMOS
 
 @login_required
 @require_http_methods(["GET"])
@@ -379,7 +364,7 @@ def get_user_loans(request, user_id):
 @login_required
 @require_http_methods(["POST"])
 def add_loan(request):
-    """Registra un nuevo préstamo."""
+    """Registra un nuevo préstamo (Sin modificar el stock total del libro)."""
     try:
         data = json.loads(request.body)
         libro_id = data.get('libro_id')
@@ -388,25 +373,27 @@ def add_loan(request):
         fch_devolucion_str = data.get('fch_devolucion')
         
         if not all([libro_id, universitario_id, fch_prestamo_str, fch_devolucion_str]):
-            return JsonResponse({'success': False, 'message': 'Faltan datos obligatorios para el préstamo.'}, status=400)
+            return JsonResponse({'success': False, 'message': 'Faltan datos.'}, status=400)
 
         if not is_bibliotecario(request.user) and request.user.pk != universitario_id:
-            return JsonResponse({'success': False, 'message': 'Permiso denegado para prestar a terceros.'}, status=403)
+            return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
         
         libro = Libro.objects.get(pk=libro_id)
         universitario = Universitario.objects.get(usuario_id=universitario_id)
         
-        if Prestamo.objects.filter(libro=libro, is_activo=True, universitario=universitario).count() > 0:
+        if Prestamo.objects.filter(libro=libro, is_activo=True, universitario=universitario).exists():
              return JsonResponse({'success': False, 'message': 'El usuario ya tiene prestado este libro.'}, status=400)
 
-        if libro.cantidad <= 0:
-            return JsonResponse({'success': False, 'message': 'No hay copias disponibles de este libro.'}, status=400)
+        prestados_actualmente = Prestamo.objects.filter(libro=libro, is_activo=True).count()
+        
+        if prestados_actualmente >= libro.cantidad:
+            return JsonResponse({'success': False, 'message': 'No quedan copias disponibles.'}, status=400)
 
         fch_prestamo = datetime.strptime(fch_prestamo_str, '%Y-%m-%d').date()
         fch_devolucion = datetime.strptime(fch_devolucion_str, '%Y-%m-%d').date()
         
         if fch_devolucion < fch_prestamo:
-            return JsonResponse({'success': False, 'message': 'La fecha de devolución no puede ser anterior a la de préstamo.'}, status=400)
+            return JsonResponse({'success': False, 'message': 'Fecha de devolución inválida.'}, status=400)
 
         with transaction.atomic():
             Prestamo.objects.create(
@@ -416,53 +403,43 @@ def add_loan(request):
                 fch_devolucion=fch_devolucion,
                 is_activo=True
             )
-            libro.cantidad = F('cantidad') - 1
-            libro.save(update_fields=['cantidad'])
-            libro.refresh_from_db()
         
         log_auditoria(request.user.id, 'PRESTAMO_ADD', 'Prestamo', f'Préstamo de {libro.titulo} a {universitario.usuario.username}.')
 
         return JsonResponse({'success': True, 'message': 'Préstamo registrado exitosamente.'}, status=201)
 
     except ObjectDoesNotExist:
-        return JsonResponse({'success': False, 'message': 'Libro o Universitario no encontrado.'}, status=404)
+        return JsonResponse({'success': False, 'message': 'Libro o Usuario no encontrado.'}, status=404)
     except Exception as e:
-        print(f"Error en add_loan: {e}")
-        return JsonResponse({'success': False, 'message': f'Error interno del servidor: {str(e)}'}, status=500)
+        return JsonResponse({'success': False, 'message': f'Error interno: {str(e)}'}, status=500)
 
 
 @csrf_exempt
 @login_required
 @require_http_methods(["POST"])
 def return_loan(request, prestamo_id):
-    """Marca un préstamo como devuelto."""
+    """Registra la devolución (Solo cambia el estado del préstamo)."""
     try:
-        loan = Prestamo.objects.get(pk=prestamo_id, is_activo=True)
-        
-        is_staff = is_bibliotecario(request.user)
-        is_owner = loan.universitario.usuario == request.user
-        
-        if not (is_owner or is_staff):
-            return JsonResponse({'success': False, 'message': 'No tienes permiso para devolver este préstamo.'}, status=403)
+        prestamo = Prestamo.objects.get(pk=prestamo_id)
 
-        with transaction.atomic():
-            loan.is_activo = False
-            loan.fch_devolucion_real = datetime.now().date()
-            loan.save(update_fields=['is_activo', 'fch_devolucion_real'])
+        if not is_bibliotecario(request.user) and prestamo.universitario.usuario != request.user:
+            return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
 
-            libro = loan.libro
-            libro.cantidad = F('cantidad') + 1
-            libro.save(update_fields=['cantidad'])
-            libro.refresh_from_db()
+        if not prestamo.is_activo:
+            return JsonResponse({'success': False, 'message': 'Este préstamo ya fue devuelto.'}, status=400)
+
+        prestamo.is_activo = False
+        prestamo.fch_devolucion_real = date.today()
+        prestamo.save()
         
-        log_auditoria(request.user.id, 'PRESTAMO_RET', 'Prestamo', f'Devolución de {libro.titulo} (ID {loan.id})')
+        log_auditoria(request.user.id, 'PRESTAMO_RETURN', 'Prestamo', f'Devolución ID {prestamo.id}.')
 
         return JsonResponse({'success': True, 'message': 'Libro devuelto exitosamente.'})
-    
+
     except Prestamo.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'Préstamo activo no encontrado.'}, status=404)
+        return JsonResponse({'success': False, 'message': 'Préstamo no encontrado.'}, status=404)
     except Exception as e:
-        return JsonResponse({'success': False, 'message': f'Error interno del servidor: {str(e)}'}, status=500)
+        return JsonResponse({'success': False, 'message': f'Error interno: {str(e)}'}, status=500)
 
 
 @csrf_exempt
@@ -507,13 +484,11 @@ def edit_book(request, libro_id):
         libro = Libro.objects.get(pk=libro_id)
         data = json.loads(request.body)
         
-        # Actualizamos los campos si vienen en el JSON
         libro.titulo = data.get('titulo', libro.titulo)
         libro.autor = data.get('autor', libro.autor)
         libro.genero = data.get('genero', libro.genero)
         libro.isbn = data.get('isbn', libro.isbn)
         
-        # Actualizamos cantidad (asegurando que sea entero)
         if 'cantidad' in data:
              libro.cantidad = int(data['cantidad'])
 
@@ -536,14 +511,11 @@ def edit_user(request, user_id):
         return JsonResponse({'success': False, 'message': 'Permiso denegado.'}, status=403)
     
     try:
-        # Obtenemos el usuario de la tabla de autenticación (User)
         target_user = User.objects.get(pk=user_id)
         data = json.loads(request.body)
         
-        # 1. Actualizar datos básicos (User)
         full_name = data.get('name', '').strip()
         if full_name:
-            # Separamos nombre y apellido simple para Django
             parts = full_name.split(' ')
             target_user.first_name = parts[0]
             target_user.last_name = ' '.join(parts[1:]) if len(parts) > 1 else ''
@@ -553,8 +525,6 @@ def edit_user(request, user_id):
             
         target_user.save()
 
-        # 2. Actualizar datos del perfil (Universitario - Doc)
-        # Verificamos si tiene perfil de Universitario
         if Universitario.objects.filter(usuario=target_user).exists():
             uni = Universitario.objects.get(usuario=target_user)
             if 'doc' in data:
@@ -581,13 +551,11 @@ def edit_loan(request, prestamo_id):
         loan = Prestamo.objects.get(pk=prestamo_id)
         data = json.loads(request.body)
         
-        # Actualizamos fechas
         if 'fch_prestamo' in data:
             loan.fch_prestamo = datetime.strptime(data['fch_prestamo'], '%Y-%m-%d').date()
         if 'fch_devolucion' in data:
             loan.fch_devolucion = datetime.strptime(data['fch_devolucion'], '%Y-%m-%d').date()
             
-        # Actualizar el usuario si cambió (asumiendo que viene el ID de usuario)
         if 'universitario_id' in data and data['universitario_id']:
             from .models import Universitario
             uni = Universitario.objects.get(usuario_id=data['universitario_id'])

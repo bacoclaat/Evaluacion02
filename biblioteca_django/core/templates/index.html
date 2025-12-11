@@ -33,7 +33,6 @@
     main{margin:12px 0 24px}
     .grid{display:grid;gap:12px}
     @media (min-width:900px){
-      /* Grid ajustado. 1.2fr solo para Préstamo cuando es universitario, 1.1fr+1.1fr+1.2fr para bibliotecario */
       .grid-3{grid-template-columns:1.1fr 1.1fr 1.2fr} 
       .grid-2{grid-template-columns:1fr 1fr}
     }
@@ -369,9 +368,7 @@
   </main>
 
   <script>
-    // --------------------------------------------------------------------------
-    // --- UTILIDADES ---
-    // --------------------------------------------------------------------------
+    
     const $ = (s,root=document)=>root.querySelector(s);
     const todayISO = () => new Date().toLocaleDateString('en-CA');
     const uid = ()=> Math.random().toString(36).slice(2)+Date.now().toString(36);
@@ -401,14 +398,12 @@ function updateProfileUI() {
     }
 }
     
-    // Función para obtener el CSRF Token (Necesario en Django para POST/PUT/DELETE)
     function getCookie(name) {
       let cookieValue = null;
       if (document.cookie && document.cookie !== '') {
           const cookies = document.cookie.split(';');
           for (let i = 0; i < cookies.length; i++) {
               let cookie = cookies[i].trim();
-              // Does this cookie string begin with the name we want?
               if (cookie.substring(0, name.length + 1) === (name + '=')) {
                   cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                   break;
@@ -418,36 +413,26 @@ function updateProfileUI() {
       return cookieValue;
     }
 
-    // --------------------------------------------------------------------------
-    // --- ESTADO GLOBAL (AHORA SE ALMACENAN DESDE LA API) ---
-    // --------------------------------------------------------------------------
     let books = [];
     let users = [];
     let loans = [];
-    let currentAccount = null; // Almacena {id, role, name, doc} del usuario logeado
+    let currentAccount = null;
     
-    // Variable para manejar si se ha intentado cargar la sesión desde la cookie
     let sessionLoaded = false; 
 
     function isAdmin() {
       return currentAccount && currentAccount.role === "Bibliotecario";
     }
 
-    // El ID del usuario Universitario logeado es el ID que Django usa para la tabla User y Universitario
     function getCurrentUserId() {
         return currentAccount ? currentAccount.id : null;
     }
     
-    // Control de callback genérico
     function runWithCallback(nombreAccion, callback){
       console.log("Ejecutando acción:", nombreAccion);
       if(typeof callback === "function"){ callback(); }
     }
 
-
-    // --------------------------------------------------------------------------
-    // --- VALIDACIONES ---
-    // --------------------------------------------------------------------------
 
     function validateEmail(email) {
         const re = /^(([^<>()[\]\\.,;:\s@"]+(\.[^<>()[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
@@ -478,7 +463,6 @@ function updateProfileUI() {
     function applyRolePermissions() {
       const isA = isAdmin();
       
-      // 1. Ocultar/mostrar formularios (Step 0)
       $("#cardBooksForm").style.display = isA ? "block" : "none";
       $("#cardUsersForm").style.display = isA ? "block" : "none";
 
@@ -501,7 +485,6 @@ function updateProfileUI() {
           }
       }
 
-      // 2. Ocultar/mostrar tablas (Step 1)
       const usersTableContainer = $("#usersTableContainer");
       const tableGrid = document.querySelector(".step-container[data-step='1'] .grid-2");
       
@@ -512,7 +495,6 @@ function updateProfileUI() {
           tableGrid.style.gridTemplateColumns = isA ? "1fr 1fr" : "1fr";
       }
 
-      // 3. Paso 2: Historial de Préstamos
       $("#tblLoans").style.display = isA ? "table" : "none"; 
       $("#tblUserLoans").style.display = isA ? "none" : "table"; 
       $("#loansTitle").textContent = isA ? "Historial de Préstamos" : "Mis Préstamos";
@@ -521,9 +503,9 @@ function updateProfileUI() {
       showStep(0); 
     }
 
-    // --------------------------------------------------------------------------
+    
     // --- NAVEGACIÓN ---
-    // --------------------------------------------------------------------------
+    
     let currentStep = 0;
     function showStep(idx){
       const steps = document.querySelectorAll(".step-container");
@@ -547,7 +529,6 @@ function updateProfileUI() {
       $("#btnNext").disabled = currentStep === maxStep;
       
       if(currentStep === 2) {
-        // En el paso de préstamos, forzamos la recarga para ver el estado más reciente.
         loadInitialData(true); 
       } else {
         renderAll();
@@ -556,22 +537,16 @@ function updateProfileUI() {
     function prevStep(){ showStep(currentStep - 1); }
     function nextStep(){ showStep(currentStep + 1); }
 
-    // --------------------------------------------------------------------------
-    // --- AUTENTICACIÓN (USA API DJANGO) ---
-    // --------------------------------------------------------------------------
+    
+    // --- AUTENTICACIÓN ---
+    
 
-    /**
-     * Intenta cargar la sesión activa.
-     * Esta función depende de que Django retorne el estado de la sesión
-     * o la información del usuario logeado a través de un endpoint GET.
-     */
     async function checkSession() {
         try {
             const response = await fetch('/api/check_session/'); 
             const data = await response.json();
 
             if (data.is_authenticated) {
-                // Asume que Django devuelve el rol y el ID
                 currentAccount = {
                     id: data.user_id,
                     role: data.role,
@@ -585,7 +560,6 @@ function updateProfileUI() {
                 $("#viewApp").classList.add("active");
                 $("#btnLogout").style.display = "inline-flex";
                 
-                // Cargar datos después de la autenticación
                 await loadInitialData();
                 applyRolePermissions();
             } else {
@@ -595,16 +569,12 @@ function updateProfileUI() {
             }
         } catch (error) {
             console.error("Error al verificar la sesión:", error);
-            // Si falla la conexión, mostramos login
             $("#viewLogin").classList.add("active");
             $("#viewApp").classList.remove("active");
         }
         sessionLoaded = true;
     }
 
-    /**
-     * Inicia sesión llamando al endpoint /api/login/
-     */
     async function doLogin(){
       const username = $("#loginUser").value.trim();
       const password = $("#loginPass").value.trim();
@@ -615,11 +585,11 @@ function updateProfileUI() {
       }
       
       try {
-        const response = await fetch('/api/login/', { // <<-- Endpoint de Login en Django
+        const response = await fetch('/api/login/', { 
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken') // Django requiere CSRF para POST
+            'X-CSRFToken': getCookie('csrftoken') 
           },
           body: JSON.stringify({ username, password })
         });
@@ -627,7 +597,6 @@ function updateProfileUI() {
         const data = await response.json();
 
         if (response.ok && data.success) {
-          // Asume que Django devuelve {user_id, role, full_name, doc}
           currentAccount = { 
             id: data.user_id, 
             role: data.role, 
@@ -641,7 +610,7 @@ function updateProfileUI() {
             $("#viewLogin").classList.remove("active");
             $("#viewApp").classList.add("active");
             $("#btnLogout").style.display = "inline-flex";
-            await loadInitialData(); // Cargar datos del sistema
+            await loadInitialData(); 
             applyRolePermissions(); 
           });
         } else {
@@ -653,16 +622,13 @@ function updateProfileUI() {
       }
     }
 
-    /**
-     * Registra un usuario llamando al endpoint /api/register/
-     */
     async function registerUser(){
       const full_name = $("#newFullName").value.trim();
       const doc = $("#newDoc").value.trim(); 
       const email = $("#newEmail").value.trim(); 
       const password = $("#newPass").value.trim();
       const role = $("#newRole").value; 
-      const username = email.split('@')[0]; // Username por defecto
+      const username = email.split('@')[0]; 
 
       if(!full_name || !doc || !email || !password){ 
         alert("Todos los campos son obligatorios.");
@@ -678,7 +644,7 @@ function updateProfileUI() {
       }
       
       try {
-        const response = await fetch('/api/register/', { // <<-- Endpoint de Registro
+        const response = await fetch('/api/register/', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -698,7 +664,6 @@ function updateProfileUI() {
 
             alert("Usuario creado. Tu nombre de acceso es '"+username+"'. Ahora puedes iniciar sesión.");
             
-            // Recargar la lista de usuarios si es un Bibliotecario el que está en la vista
             if (isAdmin()) {
                 await loadInitialData(); 
             }
@@ -717,12 +682,9 @@ function updateProfileUI() {
       $("#loginPass").value = "";
     }
 
-    /**
-     * Cierra la sesión llamando al endpoint /api/logout/
-     */
     async function logout(){
       try {
-        await fetch('/api/logout/', { // <<-- Endpoint de Logout en Django
+        await fetch('/api/logout/', { 
             method: 'POST',
             headers: {
                 'X-CSRFToken': getCookie('csrftoken')
@@ -747,33 +709,25 @@ function updateProfileUI() {
       });
     }
 
-    // --------------------------------------------------------------------------
+   
     // --- CARGA INICIAL DE DATOS (AHORA USA API DJANGO) ---
-    // --------------------------------------------------------------------------
-
-    /**
-     * Carga todos los datos del sistema desde la API de Django.
-     */
+  
     async function loadInitialData(forceReloadLoans = false){
-        if (!getCurrentUserId()) return; // No carga si no está logeado
-
+        if (!getCurrentUserId()) return; 
         const isA = isAdmin();
         const userId = getCurrentUserId();
         
         try {
-            // 1. Cargar Libros
             const booksResponse = await fetch('/api/books/');
             books = await booksResponse.json();
             
-            // 2. Cargar Usuarios (Solo para Bibliotecario)
             if (isA) {
                 const usersResponse = await fetch('/api/users/');
                 users = await usersResponse.json();
             } else {
-                users = []; // El Universitario no necesita la lista completa
+                users = [];
             }
             
-            // 3. Cargar Préstamos
             let loansEndpoint = isA ? '/api/loans/all/' : `/api/loans/user/${userId}/`;
             
             if (forceReloadLoans || loans.length === 0) {
@@ -788,9 +742,7 @@ function updateProfileUI() {
         }
     }
 
-    // --------------------------------------------------------------------------
-    // --- CRUD LIBROS (USA API DJANGO) ---
-    // --------------------------------------------------------------------------
+    // --- CRUD LIBROS ---
 
     async function saveBook(){
     if (!isAdmin()) {
@@ -798,15 +750,13 @@ function updateProfileUI() {
       return;
     }
 
-    // 1. Obtenemos datos del formulario
-    const id = $("#editBookId").value; // ¿Hay un ID guardado?
-    const isEdit = id !== "";          // Si hay ID, es modo edición
+    const id = $("#editBookId").value; 
+    const isEdit = id !== "";          
 
     const title = $("#bookTitle").value.trim();
     const author = $("#bookAuthor").value.trim();
     const isbn = $("#bookIsbn").value.trim();
     const type = $("#bookType").value;
-    // Aseguramos que la cantidad sea un número válido, mínimo 1
     const qtyVal = $("#bookQty").value || "1";
     const qty = Math.max(1, parseInt(qtyVal, 10));
 
@@ -815,11 +765,8 @@ function updateProfileUI() {
       return; 
     }
 
-    // 2. Definimos URL y Mensajes según el modo
     const url = isEdit ? `/api/books/${id}/edit/` : '/api/books/add/';
     const actionName = isEdit ? "editarLibro" : "guardarLibro";
-
-    // 3. Preparamos los datos
     const payload = { 
         titulo: title, 
         autor: author, 
@@ -842,8 +789,8 @@ function updateProfileUI() {
 
         if (response.ok && data.success) {
             runWithCallback(actionName, async () => {
-                clearBookForm();       // Limpia formulario
-                await loadInitialData(); // Recarga la tabla
+                clearBookForm();       
+                await loadInitialData(); 
                 alert(isEdit ? "Libro actualizado correctamente." : "Libro creado correctamente.");
             });
         } else {
@@ -861,22 +808,17 @@ function updateProfileUI() {
     $("#bookIsbn").value="";
     $("#bookQty").value=1;
     $("#bookType").value="Novela";
-    
-    // Resetear modo edición
     $("#editBookId").value = ""; 
     $("#btnSaveBook").textContent = "Guardar";
 }
 
-// ==========================================
 //  EDITAR USUARIOS
-// ==========================================
 
 async function saveUser(){
     if (!isAdmin()) return;
 
     const id = $("#editUserId").value;
     
-    // Validación: Solo permitimos editar si hay un ID cargado (edición)
     if(!id){
         alert("Para crear un usuario nuevo, por favor cierra sesión y usa la opción 'Crear Cuenta' en la pantalla de inicio.");
         return;
@@ -889,7 +831,6 @@ async function saveUser(){
     if(!name){ alert("El nombre es obligatorio."); return; }
 
     try {
-        // Enviamos los datos a la ruta de edición de usuarios
         const response = await fetch(`/api/users/${id}/edit/`, {
             method: 'POST',
             headers: {
@@ -904,7 +845,7 @@ async function saveUser(){
         if (response.ok && data.success) {
             runWithCallback("editarUsuario", async () => {
                 clearUserForm();
-                await loadInitialData(); // Recargamos la tabla
+                await loadInitialData(); 
                 alert("Usuario actualizado correctamente.");
             });
         } else {
@@ -932,7 +873,7 @@ function clearUserForm(){
       if(!confirm("¿Estás seguro de eliminar este libro?")) return;
       
       try {
-        const response = await fetch(`/api/books/${id}/delete/`, { // <<-- Endpoint para eliminar
+        const response = await fetch(`/api/books/${id}/delete/`, { 
           method: 'DELETE',
           headers: {'X-CSRFToken': getCookie('csrftoken')}
         });
@@ -952,9 +893,7 @@ function clearUserForm(){
       }
     }
 
-    // --------------------------------------------------------------------------
-    // --- CRUD USUARIOS (USA API DJANGO) ---
-    // --------------------------------------------------------------------------
+    // --- CRUD USUARIOS ---
 
     function addUser(){
        alert("El registro de usuarios ahora se realiza únicamente en la pantalla de Inicio de Sesión (Crear Cuenta).");
@@ -969,8 +908,7 @@ function clearUserForm(){
       if(!confirm("¿Estás seguro de eliminar este usuario?")) return;
       
       try {
-        // Nota: Asume que se pasa el ID del Usuario (User.id)
-        const response = await fetch(`/api/users/${id}/delete/`, { // <<-- Endpoint para eliminar
+        const response = await fetch(`/api/users/${id}/delete/`, { 
           method: 'DELETE',
           headers: {'X-CSRFToken': getCookie('csrftoken')}
         });
@@ -990,12 +928,10 @@ function clearUserForm(){
       }
     }
 
-    // --------------------------------------------------------------------------
-    // --- CRUD PRÉSTAMOS (USA API DJANGO) ---
-    // --------------------------------------------------------------------------
+    // --- CRUD PRÉSTAMOS ---
 
 function availableCopies(bookId){
-  const id = parseInt(bookId); // Convertimos a número
+  const id = parseInt(bookId);
   const book = books.find(b => b.id === id); 
   if(!book) return 0;
   
@@ -1003,13 +939,7 @@ function availableCopies(bookId){
   return Math.max(0, (book.cantidad || 0) - borrowed);
 }
     
-   // ==========================================
-//  GUARDAR/EDITAR PRÉSTAMO
-// ==========================================
 
-// ==========================================
-//   LOGICA NUEVA: GUARDAR/EDITAR PRÉSTAMO (CON VALIDACIÓN DE 14 DÍAS)
-// ==========================================
 
 async function saveLoan(){
     const bookId = parseInt($("#loanBook").value);
@@ -1024,7 +954,6 @@ async function saveLoan(){
     const outAt = $("#loanDate").value || todayISO();
     const dueAt = $("#loanDue").value || addDays(outAt, 14);
     
-    // Detectar modo edición
     const id = $("#editLoanId").value;
     const isEdit = id !== "";
 
@@ -1033,13 +962,10 @@ async function saveLoan(){
        return;
     }
 
-    // ---------------------------------------------------------
     // REGLA DE LOS 14 DÍAS MÁXIMOS
-    // ---------------------------------------------------------
+
     const dStart = new Date(outAt);
     const dEnd = new Date(dueAt);
-    
-    // Calculamos la diferencia en milisegundos y la convertimos a días
     const diffTime = dEnd - dStart; 
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
 
@@ -1049,14 +975,10 @@ async function saveLoan(){
     }
 
     if (diffDays > 14) {
-        // Usamos tu función auxiliar addDays para mostrarle la fecha correcta
         alert("El plazo máximo es de 14 días.");
-        return; // Detiene el guardado
+        return; 
     }
-    // ---------------------------------------------------------
 
-    
-    // Solo validamos copias si es un préstamo NUEVO. 
     if (!isEdit && availableCopies(bookId) <= 0) { 
        alert("No hay copias disponibles para este libro.");
        return;
@@ -1109,15 +1031,15 @@ function clearLoanForm(){
     
     $("#editLoanId").value = "";
     $("#btnSaveLoan").textContent = "Prestar";
-    $("#loanBook").disabled = false; // Reactivamos el cambio de libro
-}
+    $("#loanBook").disabled = false;
+    }
+ 
     async function returnLoan(id){
-      // La devolución puede ser iniciada por el usuario (propietario) o el bibliotecario
       
       if(!confirm("¿Confirmas la devolución de este libro?")) return;
 
       try {
-        const response = await fetch(`/api/loans/${id}/return/`, { // <<-- Endpoint para devolver
+        const response = await fetch(`/api/loans/${id}/return/`, { 
           method: 'POST',
           headers: {'X-CSRFToken': getCookie('csrftoken')}
         });
@@ -1137,11 +1059,7 @@ function clearLoanForm(){
       }
     }
     
-    // (Mantengo deleteLoan y los prompts, asumiendo que los endpoints de edición/eliminación se implementan de forma similar)
-
-    // --------------------------------------------------------------------------
-    // --- GOOGLE BOOKS API (SIN CAMBIOS) ---
-    // --------------------------------------------------------------------------
+    // --- GOOGLE BOOKS API ---
     
     function searchBookLinkByQuery(query) {
         const q = query.trim();
@@ -1186,9 +1104,7 @@ function clearLoanForm(){
         searchBookLinkByQuery(query);
     }
 
-    // --------------------------------------------------------------------------
-    // --- RENDERIZADO Y HELPERS (ADAPTADO A LA ESTRUCTURA DE LA API) ---
-    // --------------------------------------------------------------------------
+    // --- RENDERIZADO ---
 
     function renderAll(){
       renderCombos();
@@ -1206,20 +1122,17 @@ function clearLoanForm(){
     function renderCombos(){
       const bookSel=$("#loanBook"), userSel=$("#loanUser");
       
-      // Libros: Utiliza la cantidad disponible devuelta por Django (si la API lo provee) o calcula el disp.
       bookSel.innerHTML='<option value="">— Selecciona —</option>'+books.map(b=>{
-        const disp=availableCopies(b.id), type=b.genero||"—"; // 'genero' es el campo en el modelo de Django
+        const disp=availableCopies(b.id), type=b.genero||"—"; 
         return `<option value="${b.id}">${escapeHtml(b.titulo)} (${escapeHtml(type)}) — ${disp}/${b.cantidad} disp.</option>`;
       }).join("");
       
-      // Usuarios: Los usuarios deben ser mapeados a la lista que devuelve la API (asume un array con {id, name, doc})
       userSel.innerHTML='<option value="">— Selecciona —</option>'+users.map(u=>
         `<option value="${u.id}">${escapeHtml(u.name)} (${escapeHtml(u.doc)})</option>`
       ).join("");
     }
     
     function renderKpis(){
-      // La API de Django debería proporcionar estos KPIs directamente para mayor precisión.
       const active=loans.filter(l=>l.is_activo).length;
       const available=books.reduce((acc,b)=>acc+availableCopies(b.id),0);
       $("#kpiBooks").textContent=books.length;
@@ -1238,7 +1151,6 @@ function clearLoanForm(){
       books
         .filter(b=>!q?true:[b.titulo,b.autor,b.isbn,b.genero].some(x=>(x||"").toLowerCase().includes(q)))
         .forEach(b=>{
-          // NOTA: Los prompts de edición rápida no están implementados en el backend.
           const actionsHtml = isA
             ? `
               <button class="btn small" onclick="editBookPrompt('${b.id}')">Editar</button>
@@ -1269,7 +1181,6 @@ function clearLoanForm(){
       users
         .filter(u=>!q?true:[u.name,u.doc].some(x=>(x||"").toLowerCase().includes(q)))
         .forEach(u=>{
-          // Busca préstamos activos donde el 'universitario.id' sea el id del usuario
           const count=loans.filter(l=>l.universitario.id===u.id && l.is_activo).length; 
           const tr=document.createElement("tr");
           tr.innerHTML=`
@@ -1284,7 +1195,6 @@ function clearLoanForm(){
         });
     }
 
-    // Renderiza el historial COMPLETO (Solo Bibliotecario)
     function renderLoans(){
       if (!isAdmin()) return; 
       
@@ -1292,14 +1202,13 @@ function clearLoanForm(){
       const tb=document.querySelector("#tblLoans tbody"); if(!tb) return;
       tb.innerHTML="";
       
-      // Los datos vienen del backend, la estructura de 'l' ahora debe ser {id, libro:{titulo}, universitario:{name}, fch_prestamo, fch_devolucion, is_activo, fch_devolucion_real}
       loans
         .filter(l=>{
           if(!q) return true;
           return [l.libro.titulo, l.universitario.name, l.fch_prestamo, l.fch_devolucion]
             .some(x=>(x||"").toLowerCase().includes(q));
         })
-        .sort((a,b)=>(b.is_activo?1:0)-(a.is_activo?1:0)) // Los activos primero
+        .sort((a,b)=>(b.is_activo?1:0)-(a.is_activo?1:0)) 
         .forEach(l=>{
           const status=loanStatus(l);
           const tr=document.createElement("tr");
@@ -1318,20 +1227,17 @@ function clearLoanForm(){
         });
     }
 
-    // Renderiza solo los préstamos del usuario logeado (Universitario)
     function renderUserLoans(){
         if (isAdmin() || !getCurrentUserId()) return; 
 
         const tb=document.querySelector("#tblUserLoans tbody"); if(!tb) return;
         tb.innerHTML="";
         
-        // Los préstamos de 'loans' ya están filtrados por loadInitialData() para el universitario
         loans
-            .sort((a,b)=>(b.is_activo?1:0)-(a.is_activo?1:0)) // Los activos primero
+            .sort((a,b)=>(b.is_activo?1:0)-(a.is_activo?1:0)) 
             .forEach(l => {
                 const status = loanStatus(l);
                 const tr = document.createElement("tr");
-                // El universitario puede devolver sus propios libros
                 const actionButton = l.is_activo 
                     ? `<td class="actions"><button class="btn-ok small" onclick="returnLoan('${l.id}')">Devolver</button></td>` 
                     : `<td></td>`;
@@ -1347,18 +1253,15 @@ function clearLoanForm(){
             });
     }
 
-    // Helpers
     function statusBadge(s){
       const cls=s==="Atrasado"?"danger":(s==="Prestado"?"warn":"ok");
       return `<span class="pill ${cls}">${s}</span>`;
     }
     
-    // El modelo de Django usa 'is_activo' y 'fch_devolucion_real'
     function loanStatus(l){
       if(!l.is_activo && l.fch_devolucion_real) return "Devuelto";
       
       const now=todayISO();
-      // Django usa fch_devolucion como la fecha de VENCIMIENTO
       return l.fch_devolucion<now?"Atrasado":"Prestado"; 
     }
     
@@ -1382,69 +1285,47 @@ function clearLoanForm(){
       }[m]));
     }
 
-    // Prompts de edición rápida (REQUIEREN IMPLEMENTACIÓN EN EL BACKEND)
     function editBookPrompt(id){
-    // 1. Busca el libro en la memoria
     const book = books.find(b => b.id == id);
     if(!book) return;
 
-    // 2. Rellena el formulario
     $("#bookTitle").value = book.titulo;
     $("#bookAuthor").value = book.autor;
     $("#bookIsbn").value = book.isbn;
     $("#bookType").value = book.genero;
     $("#bookQty").value = book.cantidad;
-
-    // 3. Activa el modo edición
     $("#editBookId").value = book.id;
     $("#btnSaveBook").textContent = "Actualizar Libro";
-    
-    // 4. Te lleva al formulario visualmente
     showStep(0);
 }
     
       function editUserPrompt(id){
-    // 1. Buscamos al usuario en la memoria
     const user = users.find(u => u.id == id);
     if(!user) return;
-
-    // 2. Llenamos el formulario con sus datos
     $("#editUserName").value = user.name;
     $("#editUserDoc").value = user.doc;
     $("#editUserId").value = user.id;
-    
-    // Dejamos email vacío intencionalmente para que el admin lo rellene si desea cambiarlo
     $("#editUserEmail").value = ""; 
 
-    // 3. Llevamos visualmente al usuario al formulario
     showStep(0); 
     
-    // Efecto visual para resaltar el formulario
     $("#cardUsersForm").style.borderColor = "#fbbf24";
     setTimeout(()=>$("#cardUsersForm").style.borderColor = "var(--border)", 2000);
 }
     function editLoanPrompt(id){
-    // 1. Buscamos el préstamo en la memoria
     const loan = loans.find(l => l.id == id);
     if(!loan) return;
 
-    // 2. Llenamos el formulario con los datos
     $("#loanBook").value = loan.libro.id;
-    $("#loanUser").value = loan.universitario.id; // Puede ser null si el usuario fue borrado, pero el select lo manejará
-    
-    // 3. Ajustamos las fechas (cortamos los primeros 10 caracteres para que encaje en el input date: YYYY-MM-DD)
+    $("#loanUser").value = loan.universitario.id; 
+
     if(loan.fch_prestamo) $("#loanDate").value = loan.fch_prestamo.slice(0,10);
     if(loan.fch_devolucion) $("#loanDue").value = loan.fch_devolucion.slice(0,10);
 
-    // 4. Activamos el modo edición
     $("#editLoanId").value = loan.id;
     $("#btnSaveLoan").textContent = "Actualizar Préstamo";
-    
-    // Opcional: Bloqueamos cambiar el libro para evitar conflictos de stock (si quieren cambiar libro, mejor borrar y crear nuevo)
-    // Si prefieres permitirlo, borra la siguiente línea:
     $("#loanBook").disabled = false; 
 
-    // 5. Llevamos visualmente al formulario
     showStep(0);
     $("#cardLoansForm").style.borderColor = "#fbbf24";
     setTimeout(()=>$("#cardLoansForm").style.borderColor = "var(--border)", 2000);
@@ -1482,7 +1363,6 @@ function clearLoanForm(){
     (function init(){
       $("#loanDate").value=todayISO();
       $("#loanDue").value=addDays(todayISO(),14);
-      // Intenta cargar la sesión al inicio
       checkSession(); 
     })();
   </script>
